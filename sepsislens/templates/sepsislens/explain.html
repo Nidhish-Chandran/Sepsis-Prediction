@@ -1,272 +1,122 @@
 {% extends "sepsislens/base.html" %}
 
-{% block title %}SepsisLens — Explainable AI (SHAP){% endblock %}
+{% block title %}SepsisLens — Prediction Explanation{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-lg-4 py-4">
-    <!-- Header -->
-    <div class="mb-4">
-        <h3 class="fw-bold mb-1">
-            <i class="fa-solid fa-brain text-teal me-2" style="color: #0d9488;"></i>
-            Explainable AI: Model Insights & SHAP Explanations
-        </h3>
-        <p class="text-secondary small mb-0">
-            TreeSHAP local feature attribution and ensemble Gini importance across the 164 engineered clinical dimensions.
-        </p>
+<div class="container py-4" style="max-width: 820px;">
+    <!-- Top Back Link -->
+    <div class="mb-3">
+        <a href="{% url 'results' %}" class="text-secondary small text-decoration-none">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Results
+        </a>
     </div>
 
-    <!-- Patient-Level Local SHAP Explanation -->
     {% if local_explanation %}
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-white py-3 border-0">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <span class="badge bg-purple mb-1" style="background-color: #7e22ce;">Local SHAP Attribution</span>
-                        <h5 class="fw-bold mb-0">
-                            Patient: <span class="text-primary">{{ patient_id }}</span> | ICU Hour: <span class="text-dark">{{ hour }}</span>
-                        </h5>
-                    </div>
-                    <div>
-                        <span class="badge {% if local_explanation.verdict == 'SEPSIS ALERT' %}badge-sepsis-alert{% else %}badge-low-risk{% endif %} fs-6 px-3 py-2">
-                            {{ local_explanation.verdict }} (Risk: {{ local_explanation.risk_percent }}%)
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-4 pt-0">
-                <p class="text-secondary small mb-4">
-                    The chart below shows how each clinical measurement at this hour pushed the Random Forest prediction away from the baseline expectation ({{ local_explanation.base_value|floatformat:3 }}). Positive values (red) increase sepsis probability; negative values (teal) reduce it.
-                </p>
-
-                <!-- SHAP Feature Bar Chart -->
-                <div class="mb-4" style="height: 320px;">
-                    <canvas id="localShapChart"></canvas>
-                </div>
-
-                <!-- Risk Factors Breakdown -->
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="p-3 rounded-3 bg-light border h-100">
-                            <h6 class="fw-bold text-danger mb-2">
-                                <i class="fa-solid fa-arrow-trend-up me-1"></i> Top Risk-Increasing Drivers (+SHAP)
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-borderless small mb-0">
-                                    <thead>
-                                        <tr class="text-secondary border-bottom">
-                                            <th>Feature</th>
-                                            <th>Recorded Value</th>
-                                            <th>SHAP Impact</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for f in local_explanation.risk_increasing %}
-                                            <tr>
-                                                <td class="fw-semibold">{{ f.display_name }}</td>
-                                                <td><code>{{ f.value }}</code></td>
-                                                <td class="text-danger fw-bold">+{{ f.shap_value }}</td>
-                                            </tr>
-                                        {% empty %}
-                                            <tr><td colspan="3" class="text-secondary">No significant risk-increasing factors.</td></tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="p-3 rounded-3 bg-light border h-100">
-                            <h6 class="fw-bold text-teal mb-2" style="color: #0d9488;">
-                                <i class="fa-solid fa-arrow-trend-down me-1"></i> Top Protective Factors (-SHAP)
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-borderless small mb-0">
-                                    <thead>
-                                        <tr class="text-secondary border-bottom">
-                                            <th>Feature</th>
-                                            <th>Recorded Value</th>
-                                            <th>SHAP Impact</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for f in local_explanation.risk_decreasing %}
-                                            <tr>
-                                                <td class="fw-semibold">{{ f.display_name }}</td>
-                                                <td><code>{{ f.value }}</code></td>
-                                                <td class="text-success fw-bold">{{ f.shap_value }}</td>
-                                            </tr>
-                                        {% empty %}
-                                            <tr><td colspan="3" class="text-secondary">No significant protective factors.</td></tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Missing Data Audit -->
-                {% if missing_warnings %}
-                    <div class="alert alert-warning border-0 rounded-3 mt-4 mb-0 small">
-                        <div class="fw-bold mb-1">
-                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                            Missing Signal Audit for Patient {{ patient_id }} (Hour {{ hour }})
-                        </div>
-                        <p class="mb-1 text-dark opacity-90">
-                            The following {{ missing_warnings|length }} clinical signals were unmeasured at this specific ICU hour and were forward-filled from earlier readings or imputed with population medians:
-                        </p>
-                        <div class="d-flex flex-wrap gap-1 mt-2">
-                            {% for m in missing_warnings %}
-                                <span class="badge bg-white text-dark border">{{ m }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    {% elif not has_predictions %}
-        <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-4">
-            <div class="py-3">
-                <i class="fa-solid fa-file-csv fa-3x text-secondary mb-3"></i>
-                <h5 class="fw-bold">No Patient Timeline Currently Loaded</h5>
-                <p class="text-secondary small mb-3">
-                    Upload an ICU dataset or run a sample prediction to inspect patient-level SHAP contributions.
-                </p>
-                <a href="{% url 'upload' %}" class="btn btn-outline-primary" style="color: #0d9488; border-color: #0d9488;">
-                    Go to Upload Page
-                </a>
-            </div>
-        </div>
-    {% endif %}
-
-    <!-- Global Feature Importance -->
-    <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- Selected Prediction Header -->
+        <div class="card card-simple p-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <div>
-                    <h5 class="fw-bold mb-0">
-                        <i class="fa-solid fa-ranking-star text-primary me-2"></i>
-                        Global Feature Importance (Top 25 Dimensions)
-                    </h5>
-                    <div class="small text-secondary">Averaged Gini impurity reduction across all 300 decision trees in the ensemble</div>
+                    <h4 class="fw-bold text-dark mb-0">Prediction Explanation</h4>
+                    <div class="text-secondary small">
+                        Patient: <strong>{{ patient_id }}</strong> • ICU Hour: <strong>{{ hour }}</strong>
+                    </div>
                 </div>
-                <span class="badge bg-teal" style="background-color: #0d9488;">Trained Random Forest</span>
+                <div>
+                    {% if local_explanation.verdict == 'SEPSIS ALERT' %}
+                        <span class="badge badge-alert fs-6">SEPSIS ALERT ({{ local_explanation.risk_percent }}%)</span>
+                    {% else %}
+                        <span class="badge badge-low-risk fs-6">Low Risk ({{ local_explanation.risk_percent }}%)</span>
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Global Chart -->
-            <div class="mb-4" style="height: 380px;">
-                <canvas id="globalImportanceChart"></canvas>
+            <!-- Plain English Explanation -->
+            <p class="text-secondary small mb-3">
+                The Random Forest model evaluated this patient's hourly readings against the learned decision threshold (26.0%). The chart below displays the primary clinical factors that influenced the model's score for this hour.
+                <span class="text-muted fst-italic">Note: These values represent statistical model associations and do not imply direct medical causation.</span>
+            </p>
+
+            <!-- Simple Bar Chart -->
+            <div class="mb-4" style="height: 240px;">
+                <canvas id="simpleExplainChart"></canvas>
             </div>
 
-            <!-- Table of Top Global Features -->
+            <!-- Table of Influencing Factors -->
+            <h6 class="fw-bold text-dark mb-2">Most Relevant Influencing Factors</h6>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-clean table-sm align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>Rank</th>
-                            <th>Feature Name</th>
-                            <th>Clinical Category</th>
-                            <th>Relative Importance</th>
-                            <th>Weight (%)</th>
+                            <th>Clinical Feature</th>
+                            <th>Recorded Value</th>
+                            <th>Model Association</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for g in global_importance %}
+                        {% for f in local_explanation.risk_increasing|slice:":5" %}
                             <tr>
-                                <td class="fw-bold text-secondary">#{{ g.rank }}</td>
-                                <td class="fw-semibold">{{ g.display_name }}</td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">{{ g.category }}</span>
-                                </td>
-                                <td>
-                                    <div class="progress" style="height: 8px; width: 140px;">
-                                        <div class="progress-bar bg-primary" style="width: {{ g.importance_percent|floatformat:1 }}%;"></div>
-                                    </div>
-                                </td>
-                                <td class="font-monospace small fw-bold">{{ g.importance_percent }}%</td>
+                                <td class="fw-semibold text-dark">{{ f.display_name }}</td>
+                                <td><code>{{ f.value }}</code></td>
+                                <td class="text-danger fw-semibold">Pushed score higher</td>
+                            </tr>
+                        {% endfor %}
+                        {% for f in local_explanation.risk_decreasing|slice:":3" %}
+                            <tr>
+                                <td class="fw-semibold text-dark">{{ f.display_name }}</td>
+                                <td><code>{{ f.value }}</code></td>
+                                <td class="text-success fw-semibold">Pushed score lower</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <h5 class="fw-bold text-dark">No Prediction Selected</h5>
+            <p class="text-secondary small mb-3">Please select a record from the Results page to view its explanation.</p>
+            <a href="{% url 'results' %}" class="btn btn-teal">
+                Go to Results
+            </a>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. Local SHAP Chart
-    const localChartData = {{ local_chart_json|safe }};
-    if (localChartData && localChartData.length > 0) {
-        const labels = localChartData.map(d => d.display_name);
-        const values = localChartData.map(d => d.shap_value);
-        const colors = localChartData.map(d => d.is_positive ? '#e11d48' : '#0d9488');
+    const chartData = {{ local_chart_json|safe }};
+    if (chartData && chartData.length > 0) {
+        const topFactors = chartData.slice(0, 7).reverse();
+        const labels = topFactors.map(d => d.display_name);
+        const values = topFactors.map(d => d.shap_value);
+        const colors = topFactors.map(d => d.is_positive ? '#dc2626' : '#0d9488');
 
-        const ctxLocal = document.getElementById('localShapChart').getContext('2d');
-        new Chart(ctxLocal, {
+        const ctx = document.getElementById('simpleExplainChart').getContext('2d');
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'SHAP Value (Impact on Sepsis Log-Odds / Prob)',
                     data: values,
                     backgroundColor: colors,
-                    borderRadius: 4,
+                    borderRadius: 4
                 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: { display: true, text: 'SHAP Feature Contribution (Toward Sepsis Risk)' },
-                        grid: { color: '#f1f5f9' }
-                    },
-                    y: {
-                        ticks: { autoSkip: false }
-                    }
-                },
                 plugins: {
                     legend: { display: false }
-                }
-            }
-        });
-    }
-
-    // 2. Global Importance Chart
-    const globalChartData = {{ global_chart_json|safe }};
-    if (globalChartData && globalChartData.length > 0) {
-        const top15 = globalChartData.slice(0, 15).reverse();
-        const labels = top15.map(d => d.feature);
-        const values = top15.map(d => d.importance);
-
-        const ctxGlobal = document.getElementById('globalImportanceChart').getContext('2d');
-        new Chart(ctxGlobal, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Gini Importance',
-                    data: values,
-                    backgroundColor: '#0d9488',
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
+                },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Feature Importance Score' }
+                        title: { display: true, text: 'Influence on Sepsis Score' }
                     }
-                },
-                plugins: {
-                    legend: { display: false }
                 }
             }
         });

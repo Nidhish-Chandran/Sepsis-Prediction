@@ -1,159 +1,62 @@
 {% extends "sepsislens/base.html" %}
 
-{% block title %}SepsisLens — Upload & Predict{% endblock %}
+{% block title %}SepsisLens — Predict{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-lg-4 py-4">
-    <div class="row g-4">
-        <!-- Left: Upload Form -->
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-body p-4 p-md-5">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="card-icon icon-teal mb-0 me-3">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                        </div>
-                        <div>
-                            <h4 class="fw-bold mb-0">Upload ICU Patient Records</h4>
-                            <p class="text-secondary small mb-0">Inference via Trained Random Forest Ensemble (164 Features)</p>
-                        </div>
-                    </div>
+<div class="container py-4" style="max-width: 680px;">
+    <div class="mb-4">
+        <h3 class="fw-bold text-dark mb-1">Sepsis Risk Prediction</h3>
+        <p class="text-secondary small mb-0">Upload an ICU patient records file to run predictions using the trained Random Forest model.</p>
+    </div>
 
-                    <form method="POST" enctype="multipart/form-data" class="mt-4">
-                        {% csrf_token %}
+    <div class="card card-simple p-4 mb-4">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
 
-                        {% if form.errors %}
-                            <div class="alert alert-danger mb-4 rounded-3 border-0">
-                                {% for error in form.non_field_errors %}
-                                    <div><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ error }}</div>
-                                {% endfor %}
-                                {% for field in form %}
-                                    {% for error in field.errors %}
-                                        <div><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ field.label }}: {{ error }}</div>
-                                    {% endfor %}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <!-- Pre-loaded sample selector -->
-                        <div class="mb-4 p-3 bg-light rounded-3 border">
-                            <label class="form-label fw-bold text-dark mb-1">
-                                <i class="fa-solid fa-vial-circle-check text-teal me-1" style="color: #0d9488;"></i>
-                                Option A: Quick-Load Benchmark Patient Sample
-                            </label>
-                            <p class="text-secondary small mb-2">Select a pre-verified test fixture to immediately inspect inference outputs:</p>
-                            {{ form.sample_choice }}
-                        </div>
-
-                        <div class="text-center my-3 text-secondary small fw-bold">
-                            <span class="px-3 bg-white text-muted">— OR UPLOAD YOUR OWN DATASET —</span>
-                        </div>
-
-                        <!-- File Dropzone -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-dark mb-1">
-                                <i class="fa-solid fa-file-csv text-primary me-1"></i>
-                                Option B: Custom CSV / PSV File
-                            </label>
-                            <div class="upload-dropzone" onclick="document.getElementById('csv_file_input').click();">
-                                <i class="fa-solid fa-file-arrow-up fa-2x text-secondary mb-2"></i>
-                                <div class="fw-bold">Click to browse or drag and drop your CSV / PSV file</div>
-                                <div class="text-secondary small">Supports .csv, .psv, .txt (Max size: 15 MB)</div>
-                                <div id="selected_filename" class="text-success small fw-bold mt-2 d-none"></div>
-                                <div class="d-none">
-                                    {{ form.csv_file }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Threshold configuration -->
-                        <div class="mb-4 p-3 rounded-3 border bg-white">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label for="threshold_input" class="form-label fw-bold mb-0">
-                                    <i class="fa-solid fa-gauge text-warning me-1"></i>
-                                    Operating Decision Threshold:
-                                </label>
-                                <span class="badge bg-dark" id="threshold_badge">{{ default_threshold|floatformat:4 }}</span>
-                            </div>
-                            <div class="input-group">
-                                {{ form.decision_threshold }}
-                                <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('threshold_input').value='0.2604'; document.getElementById('threshold_badge').textContent='0.2604';">
-                                    Reset Default (0.2604)
-                                </button>
-                            </div>
-                            <div class="form-text small text-secondary mt-1">
-                                Scores at or above this cutoff are classified as <strong>SEPSIS ALERT</strong>. Notebook tuned cutoff maximizes F1 on validation split.
-                            </div>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold" style="background-color: #0d9488; border-color: #0d9488;">
-                            <i class="fa-solid fa-bolt me-2"></i> Execute Feature Engineering & Inference
-                        </button>
-                    </form>
+            {% if form.errors %}
+                <div class="alert alert-danger py-2 small mb-3">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <div>{{ field.label }}: {{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
                 </div>
-            </div>
-        </div>
+            {% endif %}
 
-        <!-- Right: Schema and Guide -->
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-body p-4">
-                    <h5 class="fw-bold mb-3">
-                        <i class="fa-solid fa-clipboard-check text-teal me-2" style="color: #0d9488;"></i>
-                        Expected Clinical Schema
-                    </h5>
-                    <p class="text-secondary small mb-3">
-                        The pipeline supports PhysioNet 2019 ICU format. Missing clinical variables are safely imputed via forward-fill and training-set medians.
-                    </p>
-
-                    <div class="mb-3">
-                        <div class="fw-bold small text-uppercase text-secondary mb-1">Vital Signs (8)</div>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% for v in vitals_sample %}
-                                <span class="badge bg-light text-dark border">{{ v }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold small text-uppercase text-secondary mb-1">Key Laboratory Tests (26)</div>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% for l in labs_sample %}
-                                <span class="badge bg-light text-dark border">{{ l }}</span>
-                            {% endfor %}
-                            <span class="badge bg-light text-secondary border">+18 more</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold small text-uppercase text-secondary mb-1">Demographics & Time (6)</div>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% for s in static_sample %}
-                                <span class="badge bg-light text-dark border">{{ s }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info border-0 rounded-3 small mb-0">
-                        <i class="fa-solid fa-circle-info me-1"></i>
-                        <strong>Hourly Ordering:</strong> Rows must represent chronological hours (ordered by <code>ICULOS</code> or <code>Hour</code>). Providing multi-hour timelines enables 6h trend and drift features.
-                    </div>
-                </div>
+            <!-- Step 1: Choose File -->
+            <div class="mb-3">
+                <label for="csv_file_input" class="form-label fw-semibold text-dark">Choose CSV File</label>
+                <input type="file" name="csv_file" class="form-control" accept=".csv,.psv,.txt" id="csv_file_input">
             </div>
 
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="fw-bold mb-2">Validation Safeguards</h5>
-                    <ul class="text-secondary small ps-3 mb-0">
-                        <li class="mb-2"><strong>Schema Check:</strong> Incompatible files lacking clinical signals are rejected.</li>
-                        <li class="mb-2"><strong>No Arbitrary Fabrication:</strong> Missing values are imputed with medians learned strictly during training.</li>
-                        <li class="mb-2"><strong>Leakage Prevention:</strong> Trends are computed strictly forward in time.</li>
-                        <li><strong>Safe File Handling:</strong> Upload size capped at 15 MB.</li>
-                    </ul>
-                </div>
+            <!-- Pre-loaded Sample Option (Convenient for viva / demo) -->
+            <div class="mb-3">
+                <label for="sample_choice_select" class="form-label small text-muted">Or select a demonstration sample:</label>
+                <select name="sample_choice" class="form-select form-select-sm" id="sample_choice_select">
+                    <option value="" selected>-- Select sample file --</option>
+                    <option value="septic">Septic Patient Sample (p000009)</option>
+                    <option value="nonseptic">Non-Septic Patient Sample (p000001)</option>
+                    <option value="synthetic_icu">24-Hour Synthetic ICU Stay</option>
+                </select>
             </div>
-        </div>
+
+            <!-- Step 2: Short Input Format Description -->
+            <div class="p-3 bg-light rounded small text-secondary mb-3 border">
+                <div class="fw-semibold text-dark mb-1">Accepted Input Format:</div>
+                Standard PhysioNet ICU time-series (.csv or .psv). Expected columns include vitals and labs such as <code>HR</code>, <code>O2Sat</code>, <code>Temp</code>, <code>MAP</code>, <code>Resp</code>, <code>WBC</code>, <code>Lactate</code>, and <code>ICULOS</code> (hour). Missing values are automatically imputed using training medians.
+            </div>
+
+            <!-- Optional Threshold (kept simple) -->
+            <input type="hidden" name="decision_threshold" value="0.2604">
+
+            <!-- Step 3: Predict Button -->
+            <button type="submit" class="btn btn-teal w-100 py-2">
+                <i class="fa-solid fa-play me-1"></i> Predict
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}

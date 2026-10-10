@@ -81,15 +81,15 @@ The system is designed as an **early-warning screening monitor**, not a diagnost
 
 ## 4. Key Features
 
+- **Minimal 3-Step Workflow:** Clean, beginner-friendly user journey suitable for academic viva and college project demonstration (**Dashboard → Predict → Results**).
+- **Compact Navigation:** Streamlined top navigation bar with only essential sections (Dashboard, Predict, Results, About).
 - **Robust CSV / PSV Parser & Validator:** Ingests ICU hourly data, enforces schema checks, detects missing columns, and rejects non-clinical inputs with explanatory messages.
 - **164-Feature Temporal Transformation Engine:** Reconstructs the exact feature generation logic from the research notebook (demographics, missingness indicators, cumulative counts, forward fills, 6h rolling statistics, 1h differentials, and baseline drifts).
 - **Random Forest Inference Engine:** Computes ensemble probabilities using 300 decision trees trained with `class_weight="balanced_subsample"`.
-- **Validation-Tuned Thresholding:** Employs an operating cutoff (`0.2604` / `0.3380`) calibrated on the validation cohort to optimize clinical utility.
-- **Interactive Longitudinal Visualization:** Renders patient risk progression trajectories using Chart.js with threshold alarm indicators.
-- **Patient-Level Summary & Hourly Tables:** Summarizes patient peak risk and alert status, with a full searchable hourly timeline table.
-- **Explainable AI (TreeSHAP & Gini Importance):** Deconstructs individual hourly predictions into positive (risk-increasing) and negative (protective) SHAP attributions, accompanied by missing-data audits.
-- **Model Selection Evidence Dashboard:** Displays side-by-side benchmark metrics from the research notebook, demonstrating why Random Forest was selected and discussing trade-offs where other models excelled.
-- **CSV Results Export:** Enables clinicians and researchers to download complete predictions with risk percentages and class labels.
+- **Clean Results Presentation:** Clear table displaying patient ID, ICU hour, risk score, predicted class, and status badge.
+- **Integrated Plain-English Explanations:** Clean, single-card explanation with horizontal bar chart displaying top risk factors without mathematical clutter.
+- **Consolidated Model Selection Benchmark:** Transparent evaluation table integrated directly on the About page comparing all models from the research notebook.
+- **CSV Results Export:** One-click download of generated predictions.
 
 ---
 
@@ -334,19 +334,21 @@ Open your browser at: **`http://127.0.0.1:8000/`**
 
 ---
 
-## 15. CSV Upload & Prediction Interpretation
+## 15. CSV Upload & Demonstration Workflow
 
-1. Navigate to **Upload & Predict** (`/upload/`).
-2. **Option A (Quick-Load):** Select one of the pre-loaded benchmark fixtures:
-   - *Septic Patient Case (`p000009`):* 258 ICU hours with sepsis escalation.
-   - *Non-Septic Patient Case (`p000001`):* 54 ICU hours of stable ICU recovery.
-   - *Synthetic 24h ICU Stay:* Clean illustrative case.
-3. **Option B (Custom Upload):** Drag and drop your own `.csv`, `.psv`, or `.txt` file.
-4. Set the **Operating Decision Threshold** (Default: `0.2604` / `0.3380`).
-5. Click **Execute Feature Engineering & Inference**.
-6. Review the **Longitudinal Trajectory Chart** and patient risk summaries on the **Results** page (`/results/`).
-7. Click **Explain Hour** or **Explain Patient** to view local TreeSHAP feature attributions on the **Explain AI** page (`/explain/`).
-8. Click **Export Results (CSV)** to download predictions.
+Demonstrate the application in 3 simple steps:
+
+1. **Step 1 — Open Dashboard:** Review the model name (Random Forest), feature count (164 features), and status (Ready), then click **Upload Patient Data**.
+2. **Step 2 — Predict (`/upload/`):**
+   - Choose your own CSV file, or select a pre-loaded demonstration case:
+     - *Septic Patient Case (`p000009`):* 258 ICU hours with sepsis onset.
+     - *Non-Septic Patient Case (`p000001`):* 54 ICU hours of stable recovery.
+     - *Synthetic 24h ICU Stay:* 24-hour illustrative stay.
+   - Click **Predict**.
+3. **Step 3 — View Results (`/results/`):**
+   - View patient ID, ICU hour, predicted risk score (%), prediction class, and status badge.
+   - Click **Explain** on any record to view top influencing factors in plain English.
+   - Click **Download Results (CSV)** to export predictions.
 
 ---
 

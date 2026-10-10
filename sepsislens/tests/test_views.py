@@ -3,7 +3,6 @@ Tests for all Django views, endpoints, and CSV export.
 """
 from django.test import TestCase, Client
 from django.urls import reverse
-import json
 
 class ViewAndExportTests(TestCase):
     def setUp(self):
@@ -13,33 +12,32 @@ class ViewAndExportTests(TestCase):
         """Verify home dashboard renders with HTTP 200."""
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SepsisLens: Machine Learning for Early Sepsis Detection")
-        self.assertContains(response, "300 Trees")
-        self.assertContains(response, "164 Features")
-
-    def test_model_comparison_view(self):
-        """Verify model comparison page renders with notebook benchmarks."""
-        response = self.client.get(reverse('model_comparison'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Model Selection Evidence")
+        self.assertContains(response, "SepsisLens")
         self.assertContains(response, "Random Forest")
-        self.assertContains(response, "Logistic Regression")
-        self.assertContains(response, "0.7834")  # RF ROC-AUC
-        self.assertContains(response, "0.1503")  # LR F1
-        self.assertContains(response, "27.5 Hours")  # Lead time
+        self.assertContains(response, "164 Features")
+        self.assertContains(response, "Upload Patient Data")
+
+    def test_model_comparison_redirect(self):
+        """Verify model comparison redirects to About page."""
+        response = self.client.get(reverse('model_comparison'), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Model Selection & Notebook Benchmarks")
+        self.assertContains(response, "Random Forest")
+        self.assertContains(response, "0.7834")
 
     def test_about_view(self):
         """Verify about and ethics page renders."""
         response = self.client.get(reverse('about'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "The Clinical Problem: Early Sepsis Detection")
-        self.assertContains(response, "IMPORTANT REGULATORY NOTICE")
+        self.assertContains(response, "About SepsisLens")
+        self.assertContains(response, "PhysioNet / Computing in Cardiology Challenge 2019")
+        self.assertContains(response, "Academic Prototype")
 
-    def test_results_view_without_session_redirects(self):
-        """Verify results page without active prediction session redirects to upload."""
+    def test_results_view_without_session_shows_empty_state(self):
+        """Verify results page without active prediction displays empty state."""
         response = self.client.get(reverse('results'))
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.endswith(reverse('upload')))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No Prediction Results Available")
 
     def test_full_flow_upload_results_export_and_explain(self):
         """Verify end-to-end integration: load sample, view results, export CSV, and explain."""
@@ -53,7 +51,8 @@ class ViewAndExportTests(TestCase):
         # 2. View results
         results_resp = self.client.get(reverse('results'))
         self.assertEqual(results_resp.status_code, 200)
-        self.assertContains(results_resp, "Detailed Hourly Predictions")
+        self.assertContains(results_resp, "Prediction Results")
+        self.assertContains(results_resp, "Download Results (CSV)")
 
         # 3. Export CSV
         export_resp = self.client.get(reverse('export_csv'))
@@ -66,5 +65,5 @@ class ViewAndExportTests(TestCase):
         # 4. View explain page
         explain_resp = self.client.get(reverse('explain'))
         self.assertEqual(explain_resp.status_code, 200)
-        self.assertContains(explain_resp, "Local SHAP Attribution")
-        self.assertContains(explain_resp, "Global Feature Importance")
+        self.assertContains(explain_resp, "Prediction Explanation")
+        self.assertContains(explain_resp, "Most Relevant Influencing Factors")

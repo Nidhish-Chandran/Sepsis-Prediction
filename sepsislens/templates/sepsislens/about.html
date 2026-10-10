@@ -1,149 +1,116 @@
 {% extends "sepsislens/base.html" %}
 
-{% block title %}SepsisLens — About & Clinical Ethics{% endblock %}
+{% block title %}SepsisLens — About{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-lg-4 py-4" style="max-width: 1040px;">
-    <!-- Title -->
+<div class="container py-4" style="max-width: 820px;">
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">
-            <i class="fa-solid fa-notes-medical text-teal me-2" style="color: #0d9488;"></i>
-            About SepsisLens: Methodology, Architecture & Clinical Scope
-        </h2>
-        <p class="text-secondary">
-            Full documentation on the clinical objective, machine learning methodology, and ethical safeguards.
+        <h3 class="fw-bold text-dark mb-1">About SepsisLens</h3>
+        <p class="text-secondary small mb-0">Project background, machine learning methodology, and evaluation benchmarks.</p>
+    </div>
+
+    <!-- 1. Project Overview & Problem Statement -->
+    <div class="card card-simple p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-2">Project Overview</h5>
+        <p class="text-secondary small mb-3">
+            Sepsis is a life-threatening medical emergency caused by the body's overwhelming response to an infection. In intensive care units (ICUs), early detection is vital because each hour of delay in antibiotic intervention significantly increases mortality risk.
+        </p>
+        <p class="text-secondary small mb-0">
+            <strong>SepsisLens</strong> is an academic MCA project designed to demonstrate early sepsis prediction using machine learning. It monitors multi-parameter ICU vital signs and laboratory measurements to detect early indicators up to 6 hours before clinical diagnosis criteria are met.
         </p>
     </div>
 
-    <!-- 1. Clinical Context -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4 p-md-5">
-            <h4 class="fw-bold text-dark mb-3">1. The Clinical Problem: Early Sepsis Detection</h4>
-            <p class="text-secondary">
-                Sepsis is defined by the international Sepsis-3 consensus as <em>life-threatening organ dysfunction caused by a dysregulated host response to infection</em>. In intensive care units worldwide, sepsis remains a primary driver of morbidity, prolonged hospitalization, and mortality.
-            </p>
-            <p class="text-secondary">
-                Clinical studies indicate that each hour of delayed administration of effective antimicrobial therapy during septic shock is associated with an approximate <strong>7.6% increase in mortality</strong>. However, early signs of sepsis (subtle tachycardia, respiratory rate fluctuations, lab shifts) mimic general post-operative recovery or other inflammatory conditions, making early detection exceedingly difficult.
-            </p>
-            <div class="p-3 bg-light rounded-3 border">
-                <div class="fw-bold small text-dark mb-1">The PhysioNet 2019 Sepsis Challenge Definition</div>
-                <div class="small text-secondary">
-                    The task formulated by the PhysioNet / Computing in Cardiology Challenge 2019 is to predict sepsis onset <strong>6 hours before clinical criteria are met</strong> (defined by clinical suspicion of infection combined with a ≥2 point increase in SOFA score). This 6-hour forward-shifted window provides clinicians a crucial intervention window.
-                </div>
+    <!-- 2. Dataset & Model Description -->
+    <div class="card card-simple p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-2">Dataset & Model Details</h5>
+        <div class="row g-3 small text-secondary">
+            <div class="col-md-6">
+                <div class="fw-semibold text-dark mb-1">Dataset Source</div>
+                <p class="mb-0">
+                    PhysioNet / Computing in Cardiology Challenge 2019 ICU cohort, comprising de-identified patient time-series records from two hospital systems.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="fw-semibold text-dark mb-1">Trained Model</div>
+                <p class="mb-0">
+                    Random Forest ensemble (300 decision trees) trained across 164 engineered features (vital signs, rolling averages, rate-of-change, and missingness indicators).
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="fw-semibold text-dark mb-1">Data Leakage Prevention</div>
+                <p class="mb-0">
+                    Strict patient-level stratified splitting (70% train / 15% validation / 15% test) ensuring no patient records appear across multiple partitions.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="fw-semibold text-dark mb-1">Technology Stack</div>
+                <p class="mb-0">
+                    Python 3.11, Django 5.2, Scikit-Learn 1.5, Pandas, SHAP, and Bootstrap 5.
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- 2. Machine Learning Architecture -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4 p-md-5">
-            <h4 class="fw-bold text-dark mb-3">2. System Architecture & 164-Feature Engineering</h4>
-            <p class="text-secondary">
-                Raw ICU records contain 40 raw clinical variables across vitals, labs, and demographics. Due to high sparsity (>90% missingness across key labs like Lactate or Bilirubin), SepsisLens expands the feature representation to 164 dimensions:
-            </p>
-            <div class="table-responsive">
-                <table class="table table-bordered small mb-3">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Feature Category</th>
-                            <th>Count</th>
-                            <th>Description & Clinical Rationale</th>
+    <!-- 3. Model Selection & Evaluation Summary -->
+    <div class="card card-simple p-4 mb-4" id="model-comparison">
+        <h5 class="fw-bold text-dark mb-2">Model Selection & Notebook Benchmarks</h5>
+        <p class="text-secondary small mb-3">
+            Random Forest was chosen as the deployment model because it achieved the highest discrimination quality (<strong>ROC-AUC: 0.7834</strong>) on the test cohort. Below are the actual recorded evaluation metrics from <code>ML_Project.ipynb</code>:
+        </p>
+
+        <div class="table-responsive mb-3">
+            <table class="table table-clean table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>ROC-AUC</th>
+                        <th>PR-AUC</th>
+                        <th>F1 Score</th>
+                        <th>Recall</th>
+                        <th>Precision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, m in models.items %}
+                        <tr {% if name == 'Random Forest' %}class="table-light fw-bold"{% endif %}>
+                            <td>
+                                {{ name }}
+                                {% if name == 'Random Forest' %}
+                                    <span class="badge bg-teal ms-1" style="background-color: #0d9488; font-size: 0.7rem;">Selected</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ m.ROC_AUC|floatformat:4 }}</td>
+                            <td>{{ m.PR_AUC|floatformat:4 }}</td>
+                            <td>{{ m.F1|floatformat:4 }}</td>
+                            <td>{{ m.Recall|floatformat:4 }}</td>
+                            <td>{{ m.Precision|floatformat:4 }}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="fw-bold">Static & Demographics</td>
-                            <td>6</td>
-                            <td>Age, Gender, ICU unit type (Unit1/Unit2), Hospital Admission Time, and Length of Stay (ICULOS).</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Missingness Indicators (<code>_msg</code>)</td>
-                            <td>26</td>
-                            <td>Binary flags recording whether each lab test was absent at that hour, capturing clinician diagnostic intent.</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Cumulative Observation Counts (<code>_cnt</code>)</td>
-                            <td>14</td>
-                            <td>Running frequency of tests ordered so far, reflecting patient illness severity.</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Forward-Filled Signals</td>
-                            <td>34</td>
-                            <td>Carrying last observed vital sign and lab value forward within each patient's timeline.</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">6-Hour Rolling Statistics</td>
-                            <td>56</td>
-                            <td>Rolling mean, min, max, and standard deviation over a 6-hour window capturing physiological instability.</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Hour-to-Hour Differentials (<code>_d1</code>)</td>
-                            <td>14</td>
-                            <td>First-order discrete derivative reflecting instantaneous physiological velocity.</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Baseline Drift (<code>_dbase</code>)</td>
-                            <td>14</td>
-                            <td>Cumulative physiological deviation from the patient's admission baseline state.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p class="text-secondary small mb-0">
-                <strong>Total Engineered Dimensions:</strong> 6 + 26 + 14 + 34 + 56 + 14 + 14 = <strong>164 Features</strong>.
-            </p>
+                    {% empty %}
+                        <tr><td colspan="6" class="text-muted">Metrics summary available in project documentation.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-3 bg-light rounded small text-secondary border">
+            <strong>Metric Trade-off Note:</strong> Model superiority depends on the specific clinical objective. While Random Forest achieved the top ROC-AUC (0.7834), Logistic Regression produced higher F1 (0.1503) and precision (0.1221), and Decision Tree achieved higher recall (0.3822). Random Forest was selected for robust overall discrimination across operating thresholds.
         </div>
     </div>
 
-    <!-- 3. Preprocessing & Leakage Integrity -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4 p-md-5">
-            <h4 class="fw-bold text-dark mb-3">3. Preprocessing Integrity & Data Leakage Prevention</h4>
-            <p class="text-secondary">
-                To guarantee valid generalization, the application enforces the following safeguards:
-            </p>
-            <ul class="text-secondary small ps-3 mb-0">
-                <li class="mb-2">
-                    <strong>Patient-Level Stratified Splitting:</strong> The 5,000-patient cohort was partitioned by patient ID into 70% train (3,500 patients), 15% validation (750 patients), and 15% test (750 patients). No patient's records ever straddle two sets.
-                </li>
-                <li class="mb-2">
-                    <strong>Strict Training Imputation:</strong> The median imputer is fitted strictly on the 133,397 training rows. Validation and test sets are transformed using training medians only.
-                </li>
-                <li class="mb-2">
-                    <strong>Chronological Forward-Fill:</strong> Forward-fills and rolling windows operate strictly forward in time within each patient, preventing temporal leakage.
-                </li>
-                <li>
-                    <strong>Post-Split Resampling (SMOTE):</strong> SMOTE was evaluated strictly after patient splitting on training rows only, exposing the true generalization performance.
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- 4. Limitations & Ethical Considerations -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4 p-md-5">
-            <h4 class="fw-bold text-danger mb-3">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                4. Clinical Limitations & Ethical Considerations
-            </h4>
-            <div class="alert alert-danger border-0 rounded-3 small mb-3">
-                <strong>IMPORTANT REGULATORY NOTICE:</strong> SepsisLens is an exploratory academic research software prototype. It has not received FDA clearance, CE mark certification, or prospective clinical trial validation as Software as a Medical Device (SaMD). It must never be used to initiate, alter, or withhold patient treatments.
-            </div>
-            <ul class="text-secondary small ps-3 mb-0">
-                <li class="mb-2">
-                    <strong>Cross-Hospital Domain Shift:</strong> In Cell 33 of the notebook, training on Hospital A and evaluating on unseen Hospital B resulted in a drop in ROC-AUC from 0.8224 to 0.7509, and PR-AUC from 0.1259 to 0.0484. Hospital-specific lab test patterns cause significant domain shift.
-                </li>
-                <li class="mb-2">
-                    <strong>Alert Fatigue Risk:</strong> A single-hour trigger policy produces a 21.5% false alarm rate among non-septic patients. Clinicians should employ a multi-hour confirmation policy (e.g. 2 or 3 consecutive hours) to suppress false positives.
-                </li>
-                <li class="mb-2">
-                    <strong>Missing Data Sensitivity:</strong> When an ICU patient has very few lab tests recorded, the model relies on demographic averages and population medians. Clinicians must inspect the Missing Signal Audit.
-                </li>
-                <li>
-                    <strong>Uncalibrated Score Representation:</strong> The Random Forest output score represents the ensemble vote fraction (the proportion of decision trees voting positive), which is an uncalibrated probability score.
-                </li>
-            </ul>
-        </div>
+    <!-- 4. Limitations & Disclaimer -->
+    <div class="card card-simple p-4">
+        <h5 class="fw-bold text-danger mb-2">Limitations & Disclaimer</h5>
+        <ul class="text-secondary small ps-3 mb-0">
+            <li class="mb-1">
+                <strong>Academic Prototype:</strong> SepsisLens is an educational research prototype. It has not undergone clinical certification as Software as a Medical Device (SaMD).
+            </li>
+            <li class="mb-1">
+                <strong>Exploratory Outputs:</strong> Predictions are statistical model associations and must not be used to direct, modify, or withhold patient treatments.
+            </li>
+            <li>
+                <strong>Hospital Generalization:</strong> Clinical practices and testing frequencies vary across healthcare facilities; external validation is required prior to real-world deployment.
+            </li>
+        </ul>
     </div>
 </div>
 {% endblock %}

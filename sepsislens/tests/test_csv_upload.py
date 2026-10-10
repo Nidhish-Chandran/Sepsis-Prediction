@@ -4,8 +4,6 @@ Tests for CSV validation, upload handling, and error boundaries.
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
-import pandas as pd
-import io
 
 class CSVUploadTests(TestCase):
     def setUp(self):
@@ -16,7 +14,8 @@ class CSVUploadTests(TestCase):
         """Verify upload page loads with HTTP 200."""
         response = self.client.get(self.upload_url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Upload ICU Patient Records")
+        self.assertContains(response, "Sepsis Risk Prediction")
+        self.assertContains(response, "Choose CSV File")
 
     def test_valid_csv_file_upload(self):
         """Verify upload of valid clinical CSV successfully redirects to results."""
@@ -33,8 +32,8 @@ class CSVUploadTests(TestCase):
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Inference Results & Risk Trajectory")
-        self.assertContains(response, "Total ICU Hours Evaluated")
+        self.assertContains(response, "Prediction Results")
+        self.assertContains(response, "Total Records:")
 
     def test_preloaded_sample_selection(self):
         """Verify selecting preloaded sample works without uploading file."""
@@ -44,7 +43,7 @@ class CSVUploadTests(TestCase):
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Inference Results & Risk Trajectory")
+        self.assertContains(response, "Prediction Results")
         self.assertContains(response, "sample_actual_septic_patient.csv")
 
     def test_invalid_incompatible_csv_rejected(self):

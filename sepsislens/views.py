@@ -133,13 +133,15 @@ def upload_view(request):
     return render(request, 'sepsislens/upload.html', context)
 
 def results_view(request):
-    """Displays prediction results and interactive timelines."""
+    """Displays prediction results."""
     session_key = request.session.session_key
-    cached = PREDICTION_CACHE.get(session_key)
+    cached = PREDICTION_CACHE.get(session_key) if session_key else None
 
-    if not cached:
-        messages.info(request, "No active prediction session found. Please upload a dataset or select a sample.")
-        return redirect('upload')
+    if not cached or 'results' not in cached:
+        return render(request, 'sepsislens/results.html', {
+            'total_records': 0,
+            'records': [],
+        })
 
     results = cached['results']
     summary = cached['summary']
@@ -265,30 +267,16 @@ def explain_view(request):
     return render(request, 'sepsislens/explain.html', context)
 
 def model_comparison_view(request):
-    """Model comparison and rationale page based on ML_Project.ipynb."""
-    comparison_data = get_model_comparison_data()
-    early_warning_data = get_early_warning_data()
-
-    context = {
-        'models': comparison_data,
-        'early_warning': early_warning_data,
-        'comparison_chart_json': json.dumps([
-            {
-                'name': name,
-                'roc_auc': metrics['ROC_AUC'],
-                'pr_auc': metrics['PR_AUC'],
-                'f1': metrics['F1'],
-                'recall': metrics['Recall'],
-                'precision': metrics['Precision'],
-            }
-            for name, metrics in comparison_data.items()
-        ]),
-    }
-    return render(request, 'sepsislens/model_comparison.html', context)
+    """Redirects model comparison to the consolidated About page."""
+    return redirect('about')
 
 def about_view(request):
-    """About SepsisLens, clinical limitations, and research ethics."""
-    return render(request, 'sepsislens/about.html')
+    """About SepsisLens: project overview, model description, comparison table, and disclaimer."""
+    comparison_data = get_model_comparison_data()
+    context = {
+        'models': comparison_data,
+    }
+    return render(request, 'sepsislens/about.html', context)
 
 def export_results_csv(request):
     """Exports prediction results to downloadable CSV."""
