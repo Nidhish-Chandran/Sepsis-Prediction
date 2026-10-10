@@ -5,25 +5,29 @@
 {% block content %}
 <div class="container py-4">
     {% if total_records %}
-        <!-- Header with source filename, record count, and download button -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <div>
-                <h4 class="fw-bold text-dark mb-1">Prediction Results</h4>
-                <div class="text-secondary small">
-                    Source File: <strong class="text-dark">{{ filename }}</strong> &bull; Total Records: <strong class="text-dark">{{ total_records }}</strong> &bull; Sepsis Alerts: <strong class="text-danger">{{ positive_alarms }}</strong>
+        <!-- Area A: Compact Summary -->
+        <div class="card card-simple p-3 mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h4 class="fw-bold text-dark mb-1">Prediction Results</h4>
+                    <div class="text-secondary small">
+                        File: <strong class="text-dark">{{ filename }}</strong> &bull;
+                        Total Records: <strong class="text-dark">{{ total_records }}</strong> &bull;
+                        Positive Predictions (Alerts): <strong class="text-danger">{{ positive_alarms }}</strong>
+                    </div>
                 </div>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'export_csv' %}" class="btn btn-outline-success btn-sm">
-                    <i class="fa-solid fa-download me-1"></i> Download Results (CSV)
-                </a>
-                <a href="{% url 'upload' %}" class="btn btn-teal btn-sm">
-                    <i class="fa-solid fa-plus me-1"></i> New Prediction
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'export_csv' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fa-solid fa-download me-1"></i> Download Results (CSV)
+                    </a>
+                    <a href="{% url 'upload' %}" class="btn btn-teal btn-sm">
+                        <i class="fa-solid fa-plus me-1"></i> New Prediction
+                    </a>
+                </div>
             </div>
         </div>
 
-        <!-- Clean, uncluttered Results Table -->
+        <!-- Area B: Results Table -->
         <div class="card card-simple overflow-hidden mb-3">
             <div class="table-responsive">
                 <table class="table table-clean table-hover align-middle mb-0" id="results_table">
@@ -33,7 +37,7 @@
                             <th>ICU Hour</th>
                             <th>Model Score <span class="text-muted fw-normal small">(Vote Fraction)</span></th>
                             <th>Prediction</th>
-                            <th class="text-end">Explanation</th>
+                            <th class="text-end">Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -57,9 +61,9 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    <a href="{% url 'explain' %}?row={{ r.row_index }}" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.8rem;">
-                                        Explain
-                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 btn-show-details" data-row="{{ r.row_index }}" title="View record details and feature influence">
+                                        Details
+                                    </button>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -68,7 +72,7 @@
             </div>
         </div>
 
-        <!-- Practical Pagination Controls -->
+        <!-- Pagination Controls -->
         {% if page_obj.paginator.num_pages > 1 %}
             <nav aria-label="Results pagination" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <div class="small text-muted">
@@ -104,18 +108,165 @@
             </nav>
         {% endif %}
 
+        <!-- Area C: Compact Modal for Details and Feature Explanations -->
+        <div class="modal fade" id="recordDetailsModal" tabindex="-1" aria-labelledby="recordDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header py-3 border-bottom">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="recordDetailsModalLabel">
+                                Record Details
+                            </h5>
+                            <div class="text-secondary small" id="modalPatientSubtitle">
+                                Patient — &bull; ICU Hour —
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4" id="modalBodyContent">
+                        <!-- Loading State -->
+                        <div class="text-center py-4" id="modalLoadingSpinner">
+                            <div class="spinner-border text-teal" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div class="text-secondary small mt-2">Computing feature attributions...</div>
+                        </div>
+
+                        <!-- Data Content -->
+                        <div id="modalDataContent" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border">
+                                <div>
+                                    <div class="text-muted small">Model Score</div>
+                                    <div class="h5 fw-bold text-dark mb-0" id="modalScoreDisplay">0.0000</div>
+                                </div>
+                                <div id="modalVerdictBadge">
+                                    <span class="badge badge-low-risk">Normal</span>
+                                </div>
+                            </div>
+
+                            <p class="text-secondary small mb-3">
+                                Top clinical factors contributing to this record's score. Feature contributions describe statistical model behavior, not direct medical causation.
+                            </p>
+
+                            <div class="mb-3">
+                                <div class="fw-semibold text-dark small mb-2">Factors Pushing Score Higher:</div>
+                                <ul class="list-group list-group-flush border rounded small" id="modalIncreasingList">
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="fw-semibold text-dark small mb-2">Factors Pushing Score Lower:</div>
+                                <ul class="list-group list-group-flush border rounded small" id="modalDecreasingList">
+                                </ul>
+                            </div>
+
+                            <div class="text-end pt-2 border-top">
+                                <a href="#" id="modalFullExplainLink" class="btn btn-sm btn-outline-secondary">
+                                    Full Explanation View &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     {% else %}
-        <!-- Empty State -->
-        <div class="text-center py-5">
-            <div class="mb-3 text-muted">
+        <!-- Area D: Empty State -->
+        <div class="text-center py-5 my-4">
+            <div class="mb-3 text-secondary">
                 <i class="fa-solid fa-folder-open fa-3x"></i>
             </div>
             <h5 class="fw-bold text-dark">No Prediction Results Available</h5>
             <p class="text-secondary small mb-3">Upload a patient dataset on the Upload & Predict page to see model predictions here.</p>
             <a href="{% url 'upload' %}" class="btn btn-teal">
-                Upload & Predict
+                Upload Patient Data
             </a>
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const detailsModalEl = document.getElementById('recordDetailsModal');
+    if (!detailsModalEl) return;
+    
+    const detailsModal = new bootstrap.Modal(detailsModalEl);
+    const subtitle = document.getElementById('modalPatientSubtitle');
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const dataContent = document.getElementById('modalDataContent');
+    const scoreDisplay = document.getElementById('modalScoreDisplay');
+    const verdictBadge = document.getElementById('modalVerdictBadge');
+    const incList = document.getElementById('modalIncreasingList');
+    const decList = document.getElementById('modalDecreasingList');
+    const fullLink = document.getElementById('modalFullExplainLink');
+
+    document.querySelectorAll('.btn-show-details').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const rowIdx = this.getAttribute('data-row');
+            
+            // Show modal and loading state
+            subtitle.textContent = `Fetching row ${rowIdx}...`;
+            spinner.classList.remove('d-none');
+            dataContent.classList.add('d-none');
+            detailsModal.show();
+
+            fetch(`/api/explain/?row=${rowIdx}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        subtitle.textContent = "Error loading details";
+                        spinner.classList.add('d-none');
+                        return;
+                    }
+
+                    subtitle.textContent = `Patient: ${data.patient} • ICU Hour: ${data.hour}`;
+                    scoreDisplay.textContent = `${data.risk_score} (${data.risk_percent}%)`;
+                    
+                    if (data.prediction === 1) {
+                        verdictBadge.innerHTML = '<span class="badge badge-alert"><i class="fa-solid fa-triangle-exclamation me-1"></i> Sepsis Alert</span>';
+                    } else {
+                        verdictBadge.innerHTML = '<span class="badge badge-low-risk"><i class="fa-solid fa-check me-1"></i> Normal</span>';
+                    }
+
+                    // Render increasing factors
+                    incList.innerHTML = '';
+                    if (data.risk_increasing && data.risk_increasing.length > 0) {
+                        data.risk_increasing.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
+                            li.innerHTML = `<span><strong>${item.display_name}</strong>: <code>${item.value}</code></span> <span class="badge bg-danger-subtle text-danger border">Higher Risk</span>`;
+                            incList.appendChild(li);
+                        });
+                    } else {
+                        incList.innerHTML = '<li class="list-group-item py-2 text-muted">No strong risk-elevating factors detected.</li>';
+                    }
+
+                    // Render decreasing factors
+                    decList.innerHTML = '';
+                    if (data.risk_decreasing && data.risk_decreasing.length > 0) {
+                        data.risk_decreasing.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
+                            li.innerHTML = `<span><strong>${item.display_name}</strong>: <code>${item.value}</code></span> <span class="badge bg-success-subtle text-success border">Lower Risk</span>`;
+                            decList.appendChild(li);
+                        });
+                    } else {
+                        decList.innerHTML = '<li class="list-group-item py-2 text-muted">None detected.</li>';
+                    }
+
+                    fullLink.href = `/explain/?row=${rowIdx}`;
+                    spinner.classList.add('d-none');
+                    dataContent.classList.remove('d-none');
+                })
+                .catch(err => {
+                    subtitle.textContent = "Failed to load explanation.";
+                    spinner.classList.add('d-none');
+                });
+        });
+    });
+});
+</script>
 {% endblock %}

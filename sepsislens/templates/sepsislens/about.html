@@ -4,25 +4,25 @@
 
 {% block content %}
 <div class="container py-4" style="max-width: 820px;">
-    <div class="mb-4">
+    <div class="mb-3">
         <h3 class="fw-bold text-dark mb-1">About SepsisLens</h3>
         <p class="text-secondary small mb-0">Project background, machine learning methodology, and evaluation benchmarks.</p>
     </div>
 
-    <!-- 1. Project Overview & Problem Statement -->
+    <!-- Section 1: Project Overview -->
     <div class="card card-simple p-4 mb-4">
         <h5 class="fw-bold text-dark mb-2">Project Overview</h5>
         <p class="text-secondary small mb-3">
-            Sepsis is a life-threatening medical emergency caused by the body's overwhelming response to an infection. In intensive care units (ICUs), early detection is vital because each hour of delay in antibiotic intervention significantly increases mortality risk.
+            Sepsis is a life-threatening medical emergency caused by the body's dysregulated response to an infection. In intensive care units (ICUs), early detection is critical because each hour of delay in antibiotic intervention significantly increases patient mortality risk.
         </p>
         <p class="text-secondary small mb-0">
-            <strong>SepsisLens</strong> is an academic MCA project designed to demonstrate early sepsis prediction using machine learning. It monitors multi-parameter ICU vital signs and laboratory measurements to detect early indicators up to 6 hours before clinical diagnosis criteria are met.
+            <strong>SepsisLens</strong> is an academic MCA machine-learning project developed to demonstrate early sepsis prediction using supervised classification models trained on multivariate ICU physiological time-series data.
         </p>
     </div>
 
-    <!-- 2. Dataset & Model Description -->
+    <!-- Section 2: Dataset and Model -->
     <div class="card card-simple p-4 mb-4">
-        <h5 class="fw-bold text-dark mb-2">Dataset & Model Details</h5>
+        <h5 class="fw-bold text-dark mb-2">Dataset and Model</h5>
         <div class="row g-3 small text-secondary">
             <div class="col-md-6">
                 <div class="fw-semibold text-dark mb-1">Dataset Source</div>
@@ -31,9 +31,9 @@
                 </p>
             </div>
             <div class="col-md-6">
-                <div class="fw-semibold text-dark mb-1">Trained Model</div>
+                <div class="fw-semibold text-dark mb-1">Selected Model Architecture</div>
                 <p class="mb-0">
-                    Random Forest ensemble (300 decision trees) trained across 164 engineered features (vital signs, rolling averages, rate-of-change, and missingness indicators).
+                    Random Forest ensemble (300 decision trees) trained across 164 temporal engineered features (vital signs, rolling averages, rate-of-change, and missingness indicators).
                 </p>
             </div>
             <div class="col-md-6">
@@ -51,13 +51,15 @@
         </div>
     </div>
 
-    <!-- 3. Model Selection & Evaluation Summary -->
+    <!-- Section 3: Evaluation and Limitations -->
     <div class="card card-simple p-4 mb-4" id="model-comparison">
-        <h5 class="fw-bold text-dark mb-2">Model Selection & Notebook Benchmarks</h5>
+        <h5 class="fw-bold text-dark mb-1">Model Selection & Notebook Benchmarks</h5>
+        <div class="text-secondary small mb-3">Evaluation and Limitations</div>
         <p class="text-secondary small mb-3">
-            Random Forest was chosen as the deployment model because it achieved the highest discrimination quality (<strong>ROC-AUC: 0.7834</strong>) on the test cohort. Below are the actual recorded evaluation metrics from <code>ML_Project.ipynb</code>:
+            Random Forest was chosen as the primary deployment model because it achieved the highest discrimination quality (<strong>ROC-AUC: 0.7834</strong>) on the held-out patient test cohort. Below are the actual recorded evaluation metrics from <code>ML_Project.ipynb</code>:
         </p>
 
+        <!-- Model Comparison Table -->
         <div class="table-responsive mb-3">
             <table class="table table-clean table-sm align-middle mb-0">
                 <thead>
@@ -76,7 +78,7 @@
                             <td>
                                 {{ name }}
                                 {% if name == 'Random Forest' %}
-                                    <span class="badge bg-teal ms-1" style="background-color: #0d9488; font-size: 0.7rem;">Selected</span>
+                                    <span class="badge" style="background-color: var(--accent-teal); color: #fff; font-size: 0.7rem;">Selected</span>
                                 {% endif %}
                             </td>
                             <td>{{ m.ROC_AUC|floatformat:4 }}</td>
@@ -92,14 +94,11 @@
             </table>
         </div>
 
-        <div class="p-3 bg-light rounded small text-secondary border">
-            <strong>Metric Trade-off Note:</strong> Model superiority depends on the specific clinical objective. While Random Forest achieved the top ROC-AUC (0.7834), Logistic Regression produced higher F1 (0.1503) and precision (0.1221), and Decision Tree achieved higher recall (0.3822). Random Forest was selected for robust overall discrimination across operating thresholds.
+        <div class="p-3 bg-light rounded small text-secondary mb-3 border">
+            <strong>Model Selection Rationale:</strong> Model superiority depends on the clinical objective. While Random Forest produced the best overall discrimination across decision thresholds (ROC-AUC 0.7834), Logistic Regression produced higher F1 (0.1503) and precision (0.1221), and Decision Tree had higher recall (0.3822). Random Forest was selected for robust overall discrimination on patient-level splits.
         </div>
-    </div>
 
-    <!-- 4. Project Limitations -->
-    <div class="card card-simple p-4">
-        <h5 class="fw-bold text-dark mb-2">Project Limitations</h5>
+        <h6 class="fw-bold text-dark mb-2">Project Limitations</h6>
         <ul class="text-secondary small ps-3 mb-0">
             <li class="mb-1">
                 <strong>Measurement Sparsity:</strong> Real-world ICU lab tests are sampled irregularly, requiring median imputation and forward-filling.
@@ -108,7 +107,7 @@
                 <strong>Uncalibrated Ensemble Scores:</strong> Random Forest outputs represent decision-tree vote fractions rather than calibrated probabilities.
             </li>
             <li>
-                <strong>Retrospective Cohort:</strong> Evaluated on retrospective PhysioNet 2019 ICU data; clinical deployment requires prospective validation across distinct healthcare systems.
+                <strong>Retrospective Cohort:</strong> Evaluated on retrospective PhysioNet 2019 ICU data; clinical deployment requires prospective streaming validation across distinct healthcare systems.
             </li>
         </ul>
     </div>

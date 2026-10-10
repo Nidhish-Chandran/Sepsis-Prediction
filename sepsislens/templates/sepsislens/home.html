@@ -1,31 +1,184 @@
 {% extends "sepsislens/base.html" %}
 
-{% block title %}SepsisLens — Dashboard{% endblock %}
+{% block title %}SepsisLens — Early Sepsis Risk Prediction{% endblock %}
 
 {% block content %}
-<div class="container py-5 my-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 text-center">
-            <!-- SepsisLens Title -->
-            <h1 class="display-6 fw-bold text-dark mb-2">SepsisLens</h1>
-
-            <!-- One-line project description -->
-            <p class="text-secondary fs-6 mb-4">
-                An early sepsis prediction web application using a trained Random Forest model on ICU patient records.
-            </p>
-
-            <!-- One Upload Patient Data button leading to Upload & Predict -->
-            <div class="mb-4">
-                <a href="{% url 'upload' %}" class="btn btn-teal btn-lg px-4 py-2 fs-6">
+<div class="container py-4">
+    <!-- Area A: Welcome Section -->
+    <div class="card card-simple p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Early Sepsis Risk Prediction</h3>
+                <p class="text-secondary small mb-0">
+                    Explore ICU clinical time-series data using a machine-learning research pipeline.
+                </p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="{% url 'upload' %}" class="btn btn-teal">
                     <i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload Patient Data
                 </a>
+                <a href="{% url 'about' %}" class="text-secondary small text-decoration-none">
+                    Project details &rarr;
+                </a>
             </div>
+        </div>
+    </div>
 
-            <!-- Selected model and feature count verified from actual config -->
-            <div class="text-muted small">
-                Selected Model: <strong class="text-dark">{{ model_name }}</strong> &bull; Feature Space: <strong class="text-dark">{{ feature_count }} Features</strong>
+    <!-- Area B: Three Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="metric-card">
+                <div class="metric-icon-wrap">
+                    <i class="fa-solid fa-network-wired"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-medium">Selected Model</div>
+                    <div class="h5 fw-bold text-dark mb-0">{{ model_name }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">300 Decision Trees</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card">
+                <div class="metric-icon-wrap">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-medium">Model Input Features</div>
+                    <div class="h5 fw-bold text-dark mb-0">{{ feature_count }} Features</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Temporal Engineered</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card">
+                <div class="metric-icon-wrap">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-medium">Evaluation Cohort</div>
+                    <div class="h5 fw-bold text-dark mb-0">{{ total_patients }} Patients</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">PhysioNet 2019 ICU Cohort</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Area C: One Meaningful Visualization (Model Evaluation) -->
+    <div class="card card-simple p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">Model Evaluation</h5>
+                <p class="text-secondary small mb-0">
+                    Test set discrimination (ROC-AUC) across models evaluated in the research notebook (ML_Project.ipynb).
+                </p>
+            </div>
+            <div>
+                <span class="badge" style="background-color: var(--accent-teal-subtle); color: var(--accent-teal); border: 1px solid var(--accent-teal-border); font-size: 0.75rem;">
+                    Random Forest Selected (ROC-AUC: 0.7834)
+                </span>
+            </div>
+        </div>
+        <div style="height: 190px;">
+            <canvas id="modelEvaluationChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Area D: Small Workflow Section -->
+    <div class="card card-simple p-4">
+        <h6 class="fw-bold text-dark mb-3">Prediction Workflow</h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="d-flex align-items-start">
+                    <span class="step-number">1</span>
+                    <div>
+                        <div class="fw-semibold text-dark small mb-1">Upload Data</div>
+                        <div class="text-secondary" style="font-size: 0.8rem;">
+                            Submit hourly CSV or PSV patient records adhering to the PhysioNet schema.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex align-items-start">
+                    <span class="step-number">2</span>
+                    <div>
+                        <div class="fw-semibold text-dark small mb-1">Run Prediction</div>
+                        <div class="text-secondary" style="font-size: 0.8rem;">
+                            Extract 164 temporal features and evaluate against the Random Forest ensemble.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex align-items-start">
+                    <span class="step-number">3</span>
+                    <div>
+                        <div class="fw-semibold text-dark small mb-1">Review Results</div>
+                        <div class="text-secondary" style="font-size: 0.8rem;">
+                            Inspect hourly prediction scores, sepsis alerts, and row-level TreeSHAP attributions.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {{ chart_models_json|safe }};
+    if (chartData && chartData.length > 0) {
+        // Reverse for top-down display in horizontal bar chart
+        const reversed = [...chartData].reverse();
+        const labels = reversed.map(d => d.name);
+        const values = reversed.map(d => d.roc_auc);
+        const colors = reversed.map(d => d.is_selected ? '#0d9488' : '#94a3b8');
+
+        const ctx = document.getElementById('modelEvaluationChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderRadius: 4,
+                    barThickness: 18,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Test ROC-AUC: ${context.parsed.x}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0.6,
+                        max: 0.85,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { font: { family: 'Inter', size: 11 } },
+                        title: { display: true, text: 'Test Set ROC-AUC', font: { family: 'Inter', size: 11 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 12, weight: '500' } }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

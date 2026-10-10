@@ -11,5 +11,6 @@ urlpatterns = [
     path('explain/', views.explain_view, name='explain'),
     path('model-comparison/', views.model_comparison_view, name='model_comparison'),
     path('about/', views.about_view, name='about'),
+    path('api/explain/', views.api_explain_row, name='api_explain_row'),
     path('export/csv/', views.export_results_csv, name='export_csv'),
 ]

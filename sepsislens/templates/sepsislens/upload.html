@@ -3,16 +3,23 @@
 {% block title %}SepsisLens — Upload & Predict{% endblock %}
 
 {% block content %}
-<div class="container py-4 my-2" style="max-width: 640px;">
+<div class="container py-4 my-2" style="max-width: 680px;">
+    <!-- Page Header -->
     <div class="mb-3">
-        <h3 class="fw-bold text-dark mb-1">Upload & Predict</h3>
-        <p class="text-secondary small mb-0">Upload an ICU patient records file to run predictions using the Random Forest model.</p>
+        <div class="text-secondary small text-uppercase fw-semibold" style="letter-spacing: 0.5px; font-size: 0.75rem;">
+            Upload & Predict
+        </div>
+        <h3 class="fw-bold text-dark mb-1">Upload Patient Data</h3>
+        <p class="text-secondary small mb-0">
+            Upload an ICU patient records file to run predictions using the Random Forest model.
+        </p>
     </div>
 
     <div class="card card-simple p-4">
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="prediction_upload_form">
             {% csrf_token %}
 
+            <!-- Validation Messages -->
             {% if form.errors %}
                 <div class="alert alert-danger py-2 small mb-3">
                     {% for error in form.non_field_errors %}
@@ -26,16 +33,40 @@
                 </div>
             {% endif %}
 
-            <!-- Single File Upload Form -->
+            <!-- Drag & Drop / File Upload Panel -->
             <div class="mb-3">
-                <label for="csv_file_input" class="form-label fw-semibold text-dark">Select File</label>
-                <input type="file" name="csv_file" class="form-control" accept=".csv,.psv,.txt" id="csv_file_input">
-                <div class="form-text small text-muted">Supported formats: Comma-separated (.csv) or Pipe-separated (.psv).</div>
+                <label for="csv_file_input" class="form-label fw-semibold text-dark mb-2">Select File</label>
+                
+                <div class="upload-dropzone" id="dropzone_area">
+                    <input type="file" name="csv_file" class="d-none" accept=".csv,.psv,.txt" id="csv_file_input">
+                    
+                    <div id="dropzone_prompt">
+                        <i class="fa-solid fa-cloud-arrow-up fa-2x text-secondary mb-2"></i>
+                        <div class="fw-semibold text-dark small mb-1">Click to browse or drag file here</div>
+                        <div class="text-muted" style="font-size: 0.78rem;">
+                            Accepted formats: Comma-separated (<strong>.csv</strong>) or Pipe-separated (<strong>.psv</strong>)
+                        </div>
+                    </div>
+
+                    <!-- Selected File Preview -->
+                    <div id="file_preview" class="d-none mt-2 p-2 bg-white rounded border d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center text-truncate me-2">
+                            <i class="fa-solid fa-file-csv text-teal fs-5 me-2"></i>
+                            <div class="text-start text-truncate">
+                                <div class="fw-semibold text-dark small text-truncate" id="preview_filename">filename.csv</div>
+                                <div class="text-muted" style="font-size: 0.72rem;" id="preview_filesize">0 KB</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" id="remove_file_btn" title="Remove file" style="font-size: 0.75rem;">
+                            <i class="fa-solid fa-xmark me-1"></i> Remove
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Optional Sample File Selector for Quick Demo -->
+            <!-- Preloaded Sample Dataset Selector -->
             <div class="mb-3">
-                <label for="sample_choice_select" class="form-label small text-muted">Or select a verified sample file:</label>
+                <label for="sample_choice_select" class="form-label small text-secondary fw-medium">Or select a verified sample file for demonstration:</label>
                 <select name="sample_choice" class="form-select form-select-sm" id="sample_choice_select">
                     <option value="" selected>-- Choose sample file --</option>
                     <option value="septic">Septic Patient Case (p000009)</option>
@@ -44,20 +75,107 @@
                 </select>
             </div>
 
-            <!-- Concise Accurate Format Instructions -->
-            <div class="p-3 bg-light rounded small text-secondary mb-3 border">
-                <div class="fw-semibold text-dark mb-1">Accepted Input Format:</div>
-                The pipeline ingests hourly ICU time-series data conforming to the PhysioNet 2019 dataset schema (vitals, labs, demographics). The application derives the 164 temporal engineered features (rolling statistics, differentials, baseline drifts, and missingness indicators) from the input file. Unmeasured values are imputed with training medians.
+            <!-- Schema Instructions Box -->
+            <div class="p-3 bg-light rounded small text-secondary mb-4 border">
+                <div class="fw-semibold text-dark mb-1">Accepted Schema & Preprocessing:</div>
+                The pipeline ingests hourly ICU time-series data conforming to the PhysioNet 2019 dataset schema (vital signs, laboratory tests, patient demographics). The model pipeline automatically derives the 164 temporal engineered features (rolling averages, differentials, baseline shifts, and missingness counts). Missing values are imputed using training-set medians.
             </div>
 
             <!-- Hidden Threshold -->
             <input type="hidden" name="decision_threshold" value="0.2604">
 
-            <!-- Single Predict Button -->
-            <button type="submit" class="btn btn-teal w-100 py-2">
-                Predict
+            <!-- Submit Button with Progress Feedback -->
+            <button type="submit" class="btn btn-teal w-100 py-2" id="submit_predict_btn">
+                Run Prediction
             </button>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('csv_file_input');
+    const dropzone = document.getElementById('dropzone_area');
+    const dropPrompt = document.getElementById('dropzone_prompt');
+    const preview = document.getElementById('file_preview');
+    const previewFilename = document.getElementById('preview_filename');
+    const previewFilesize = document.getElementById('preview_filesize');
+    const removeBtn = document.getElementById('remove_file_btn');
+    const sampleSelect = document.getElementById('sample_choice_select');
+    const form = document.getElementById('prediction_upload_form');
+    const submitBtn = document.getElementById('submit_predict_btn');
+
+    // Click dropzone to open file dialog (unless clicking remove button)
+    dropzone.addEventListener('click', function(e) {
+        if (!e.target.closest('#remove_file_btn')) {
+            fileInput.click();
+        }
+    });
+
+    // Drag and drop handlers
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        });
+    });
+
+    dropzone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            fileInput.files = files;
+            updateFilePreview();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFilePreview);
+
+    function updateFilePreview() {
+        if (fileInput.files && fileInput.files.length > 0) {
+            const f = fileInput.files[0];
+            previewFilename.textContent = f.name;
+            const sizeKB = (f.size / 1024).toFixed(1);
+            previewFilesize.textContent = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB} KB`;
+            dropPrompt.classList.add('d-none');
+            preview.classList.remove('d-none');
+            sampleSelect.value = ""; // Clear sample choice when file chosen
+        } else {
+            dropPrompt.classList.remove('d-none');
+            preview.classList.add('d-none');
+        }
+    }
+
+    removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.value = "";
+        dropPrompt.classList.remove('d-none');
+        preview.classList.add('d-none');
+    });
+
+    sampleSelect.addEventListener('change', function() {
+        if (sampleSelect.value) {
+            fileInput.value = "";
+            dropPrompt.classList.remove('d-none');
+            preview.classList.add('d-none');
+        }
+    });
+
+    // Form submission state
+    form.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing Predictions...';
+    });
+});
+</script>
 {% endblock %}

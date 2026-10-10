@@ -24,6 +24,28 @@ PREDICTION_CACHE = {}
 def home_view(request):
     """Dashboard homepage."""
     predictor = SepsisPredictor.get_instance()
+    comparison_data = get_model_comparison_data()
+
+    # 5 benchmark models from ML_Project.ipynb for comparison chart
+    chart_models = []
+    preferred_models = [
+        "Random Forest",
+        "Logistic Regression",
+        "SVM (Linear)",
+        "Decision Tree",
+        "SVM (RBF, subsampled)",
+    ]
+    for m_name in preferred_models:
+        if m_name in comparison_data:
+            m = comparison_data[m_name]
+            chart_models.append({
+                'name': m_name,
+                'roc_auc': round(m.get('ROC_AUC', 0), 4),
+                'f1': round(m.get('F1', 0), 4),
+                'recall': round(m.get('Recall', 0), 4),
+                'is_selected': (m_name == "Random Forest"),
+            })
+
     context = {
         'model_name': predictor.metadata.get('model_name', 'Random Forest Classifier'),
         'model_version': predictor.metadata.get('model_version', '1.0.0'),
@@ -33,8 +55,10 @@ def home_view(request):
         'total_patients': predictor.metadata.get('training_patients', 3500) + 
                           predictor.metadata.get('validation_patients', 750) + 
                           predictor.metadata.get('test_patients', 750),
+        'chart_models_json': json.dumps(chart_models),
     }
     return render(request, 'sepsislens/home.html', context)
+
 
 def upload_view(request):
     """CSV upload and validation view."""
@@ -298,3 +322,40 @@ def export_results_csv(request):
         ])
 
     return response
+
+
+def api_explain_row(request):
+    """Returns JSON feature influence for a specific prediction row (for the Results modal)."""
+    session_key = request.session.session_key
+    cached = PREDICTION_CACHE.get(session_key) if session_key else None
+    if not cached or 'results' not in cached:
+        return JsonResponse({'error': 'No active prediction session.'}, status=404)
+
+    req_row = request.GET.get('row')
+    if req_row is None or not req_row.isdigit():
+        return JsonResponse({'error': 'Invalid row parameter.'}, status=400)
+
+    target_row_idx = int(req_row)
+    results = cached['results']
+    if target_row_idx >= len(results['records']):
+        return JsonResponse({'error': 'Row out of range.'}, status=400)
+
+    rec = results['records'][target_row_idx]
+    X_imputed = results.get('X_imputed')
+
+    explainer = SepsisExplainer()
+    row_data = X_imputed.iloc[[target_row_idx]]
+    local_exp = explainer.explain_row(row_data, top_k=6)
+
+    return JsonResponse({
+        'row_index': target_row_idx,
+        'patient': rec['patient'],
+        'hour': rec['iculos'],
+        'risk_score': rec['risk_score'],
+        'risk_percent': rec['risk_percent'],
+        'prediction': rec['prediction'],
+        'verdict': rec['verdict'],
+        'risk_increasing': local_exp.get('risk_increasing', [])[:5],
+        'risk_decreasing': local_exp.get('risk_decreasing', [])[:3],
+    })
+
