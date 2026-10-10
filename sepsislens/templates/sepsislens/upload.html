@@ -1,15 +1,15 @@
 {% extends "sepsislens/base.html" %}
 
-{% block title %}SepsisLens — Predict{% endblock %}
+{% block title %}SepsisLens — Upload & Predict{% endblock %}
 
 {% block content %}
-<div class="container py-4" style="max-width: 680px;">
-    <div class="mb-4">
-        <h3 class="fw-bold text-dark mb-1">Sepsis Risk Prediction</h3>
-        <p class="text-secondary small mb-0">Upload an ICU patient records file to run predictions using the trained Random Forest model.</p>
+<div class="container py-4 my-2" style="max-width: 640px;">
+    <div class="mb-3">
+        <h3 class="fw-bold text-dark mb-1">Upload & Predict</h3>
+        <p class="text-secondary small mb-0">Upload an ICU patient records file to run predictions using the Random Forest model.</p>
     </div>
 
-    <div class="card card-simple p-4 mb-4">
+    <div class="card card-simple p-4">
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
 
@@ -26,35 +26,36 @@
                 </div>
             {% endif %}
 
-            <!-- Step 1: Choose File -->
+            <!-- Single File Upload Form -->
             <div class="mb-3">
-                <label for="csv_file_input" class="form-label fw-semibold text-dark">Choose CSV File</label>
+                <label for="csv_file_input" class="form-label fw-semibold text-dark">Select File</label>
                 <input type="file" name="csv_file" class="form-control" accept=".csv,.psv,.txt" id="csv_file_input">
+                <div class="form-text small text-muted">Supported formats: Comma-separated (.csv) or Pipe-separated (.psv).</div>
             </div>
 
-            <!-- Pre-loaded Sample Option (Convenient for viva / demo) -->
+            <!-- Optional Sample File Selector for Quick Demo -->
             <div class="mb-3">
-                <label for="sample_choice_select" class="form-label small text-muted">Or select a demonstration sample:</label>
+                <label for="sample_choice_select" class="form-label small text-muted">Or select a verified sample file:</label>
                 <select name="sample_choice" class="form-select form-select-sm" id="sample_choice_select">
-                    <option value="" selected>-- Select sample file --</option>
-                    <option value="septic">Septic Patient Sample (p000009)</option>
-                    <option value="nonseptic">Non-Septic Patient Sample (p000001)</option>
+                    <option value="" selected>-- Choose sample file --</option>
+                    <option value="septic">Septic Patient Case (p000009)</option>
+                    <option value="nonseptic">Non-Septic Patient Case (p000001)</option>
                     <option value="synthetic_icu">24-Hour Synthetic ICU Stay</option>
                 </select>
             </div>
 
-            <!-- Step 2: Short Input Format Description -->
+            <!-- Concise Accurate Format Instructions -->
             <div class="p-3 bg-light rounded small text-secondary mb-3 border">
                 <div class="fw-semibold text-dark mb-1">Accepted Input Format:</div>
-                Standard PhysioNet ICU time-series (.csv or .psv). Expected columns include vitals and labs such as <code>HR</code>, <code>O2Sat</code>, <code>Temp</code>, <code>MAP</code>, <code>Resp</code>, <code>WBC</code>, <code>Lactate</code>, and <code>ICULOS</code> (hour). Missing values are automatically imputed using training medians.
+                The pipeline ingests hourly ICU time-series data conforming to the PhysioNet 2019 dataset schema (vitals, labs, demographics). The application derives the 164 temporal engineered features (rolling statistics, differentials, baseline drifts, and missingness indicators) from the input file. Unmeasured values are imputed with training medians.
             </div>
 
-            <!-- Optional Threshold (kept simple) -->
+            <!-- Hidden Threshold -->
             <input type="hidden" name="decision_threshold" value="0.2604">
 
-            <!-- Step 3: Predict Button -->
+            <!-- Single Predict Button -->
             <button type="submit" class="btn btn-teal w-100 py-2">
-                <i class="fa-solid fa-play me-1"></i> Predict
+                Predict
             </button>
         </form>
     </div>

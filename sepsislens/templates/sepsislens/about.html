@@ -97,18 +97,18 @@
         </div>
     </div>
 
-    <!-- 4. Limitations & Disclaimer -->
+    <!-- 4. Project Limitations -->
     <div class="card card-simple p-4">
-        <h5 class="fw-bold text-danger mb-2">Limitations & Disclaimer</h5>
+        <h5 class="fw-bold text-dark mb-2">Project Limitations</h5>
         <ul class="text-secondary small ps-3 mb-0">
             <li class="mb-1">
-                <strong>Academic Prototype:</strong> SepsisLens is an educational research prototype. It has not undergone clinical certification as Software as a Medical Device (SaMD).
+                <strong>Measurement Sparsity:</strong> Real-world ICU lab tests are sampled irregularly, requiring median imputation and forward-filling.
             </li>
             <li class="mb-1">
-                <strong>Exploratory Outputs:</strong> Predictions are statistical model associations and must not be used to direct, modify, or withhold patient treatments.
+                <strong>Uncalibrated Ensemble Scores:</strong> Random Forest outputs represent decision-tree vote fractions rather than calibrated probabilities.
             </li>
             <li>
-                <strong>Hospital Generalization:</strong> Clinical practices and testing frequencies vary across healthcare facilities; external validation is required prior to real-world deployment.
+                <strong>Retrospective Cohort:</strong> Evaluated on retrospective PhysioNet 2019 ICU data; clinical deployment requires prospective validation across distinct healthcare systems.
             </li>
         </ul>
     </div>

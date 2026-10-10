@@ -14,8 +14,8 @@ class CSVUploadTests(TestCase):
         """Verify upload page loads with HTTP 200."""
         response = self.client.get(self.upload_url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sepsis Risk Prediction")
-        self.assertContains(response, "Choose CSV File")
+        self.assertContains(response, "Upload & Predict")
+        self.assertContains(response, "Select File")
 
     def test_valid_csv_file_upload(self):
         """Verify upload of valid clinical CSV successfully redirects to results."""

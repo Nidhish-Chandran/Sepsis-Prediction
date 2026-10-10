@@ -3,51 +3,27 @@
 {% block title %}SepsisLens — Dashboard{% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="container py-5 my-4">
     <div class="row justify-content-center">
         <div class="col-lg-8 text-center">
             <!-- SepsisLens Title -->
             <h1 class="display-6 fw-bold text-dark mb-2">SepsisLens</h1>
 
             <!-- One-line project description -->
-            <p class="lead text-secondary mb-4 fs-6">
+            <p class="text-secondary fs-6 mb-4">
                 An early sepsis prediction web application using a trained Random Forest model on ICU patient records.
             </p>
 
-            <!-- One prominent Upload Patient Data button -->
-            <div class="mb-5">
-                <a href="{% url 'upload' %}" class="btn btn-teal btn-lg px-4 py-2 fs-6 shadow-sm">
+            <!-- One Upload Patient Data button leading to Upload & Predict -->
+            <div class="mb-4">
+                <a href="{% url 'upload' %}" class="btn btn-teal btn-lg px-4 py-2 fs-6">
                     <i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload Patient Data
                 </a>
             </div>
 
-            <!-- Three compact details: Selected Model, Number of Features, Application Status -->
-            <div class="row g-3 justify-content-center mb-5 text-start">
-                <div class="col-sm-4">
-                    <div class="card card-simple p-3 text-center h-100">
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Selected Model</div>
-                        <div class="fw-bold text-dark">Random Forest</div>
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <div class="card card-simple p-3 text-center h-100">
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Model Features</div>
-                        <div class="fw-bold text-dark">164 Features</div>
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <div class="card card-simple p-3 text-center h-100">
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Application Status</div>
-                        <div class="fw-bold text-success">
-                            <i class="fa-solid fa-circle-check me-1"></i> Ready
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Short research-prototype disclaimer -->
-            <div class="p-3 bg-light rounded text-muted small border">
-                <strong>Disclaimer:</strong> This application is an academic research prototype developed for educational demonstration. Prediction outputs are exploratory and do not constitute clinical advice.
+            <!-- Selected model and feature count verified from actual config -->
+            <div class="text-muted small">
+                Selected Model: <strong class="text-dark">{{ model_name }}</strong> &bull; Feature Space: <strong class="text-dark">{{ feature_count }} Features</strong>
             </div>
         </div>
     </div>

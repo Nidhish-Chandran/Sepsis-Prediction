@@ -153,21 +153,12 @@ def results_view(request):
     if selected_patient:
         records = [r for r in records if r['patient'] == selected_patient]
 
-    # Hourly timeline data for Chart.js
-    chart_timeline = []
-    # If a specific patient is selected, plot their timeline; otherwise plot first patient
-    target_patient = selected_patient or (results['patient_summaries'][0]['patient'] if results['patient_summaries'] else None)
-    if target_patient:
-        pat_records = [r for r in results['records'] if r['patient'] == target_patient]
-        chart_timeline = [
-            {
-                'iculos': r['iculos'],
-                'risk_percent': r['risk_percent'],
-                'prediction': r['prediction'],
-                'verdict': r['verdict'],
-            }
-            for r in pat_records
-        ]
+    from django.core.paginator import Paginator
+
+    # Standard pagination for results table (25 rows per page)
+    paginator = Paginator(records, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'filename': filename,
@@ -177,13 +168,12 @@ def results_view(request):
         'alarm_rate': results['alarm_rate'],
         'threshold_used': results['threshold_used'],
         'threshold_percent': round(results['threshold_used'] * 100, 1),
-        'patient_summaries': results['patient_summaries'],
-        'records': records[:500],  # Show up to 500 rows in table
+        'page_obj': page_obj,
+        'records': page_obj.object_list,
         'records_count': len(records),
-        'selected_patient': target_patient,
-        'chart_timeline_json': json.dumps(chart_timeline),
     }
     return render(request, 'sepsislens/results.html', context)
+
 
 def explain_view(request):
     """Explainability page with global importance and patient-level SHAP explanation."""

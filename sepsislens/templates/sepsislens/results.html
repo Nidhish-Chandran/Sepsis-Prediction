@@ -5,12 +5,12 @@
 {% block content %}
 <div class="container py-4">
     {% if total_records %}
-        <!-- Header with Download button -->
+        <!-- Header with source filename, record count, and download button -->
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Prediction Results</h4>
                 <div class="text-secondary small">
-                    File: <span class="fw-semibold text-dark">{{ filename }}</span> • Total Records: <strong>{{ total_records }}</strong> • Alerts Raised: <strong class="text-danger">{{ positive_alarms }}</strong>
+                    Source File: <strong class="text-dark">{{ filename }}</strong> &bull; Total Records: <strong class="text-dark">{{ total_records }}</strong> &bull; Sepsis Alerts: <strong class="text-danger">{{ positive_alarms }}</strong>
                 </div>
             </div>
             <div class="d-flex gap-2">
@@ -23,18 +23,17 @@
             </div>
         </div>
 
-        <!-- Simple Results Table -->
-        <div class="card card-simple overflow-hidden mb-4">
+        <!-- Clean, uncluttered Results Table -->
+        <div class="card card-simple overflow-hidden mb-3">
             <div class="table-responsive">
                 <table class="table table-clean table-hover align-middle mb-0" id="results_table">
                     <thead>
                         <tr>
                             <th>Patient ID</th>
                             <th>ICU Hour</th>
-                            <th>Risk Score</th>
+                            <th>Model Score <span class="text-muted fw-normal small">(Vote Fraction)</span></th>
                             <th>Prediction</th>
-                            <th>Status</th>
-                            <th>Action</th>
+                            <th class="text-end">Explanation</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -43,28 +42,21 @@
                                 <td class="fw-semibold text-dark">{{ r.patient }}</td>
                                 <td>Hour {{ r.iculos }}</td>
                                 <td>
-                                    <span class="fw-semibold">{{ r.risk_percent }}%</span>
-                                    <span class="text-muted small">({{ r.risk_score }})</span>
-                                </td>
-                                <td>
-                                    {% if r.prediction == 1 %}
-                                        <span class="badge bg-danger">Class 1 (Sepsis)</span>
-                                    {% else %}
-                                        <span class="badge bg-light text-dark border">Class 0 (Normal)</span>
-                                    {% endif %}
+                                    <span class="fw-semibold">{{ r.risk_score }}</span>
+                                    <span class="text-muted small">({{ r.risk_percent }}%)</span>
                                 </td>
                                 <td>
                                     {% if r.prediction == 1 %}
                                         <span class="badge badge-alert">
-                                            <i class="fa-solid fa-triangle-exclamation me-1"></i> SEPSIS ALERT
+                                            <i class="fa-solid fa-triangle-exclamation me-1"></i> Sepsis Alert
                                         </span>
                                     {% else %}
                                         <span class="badge badge-low-risk">
-                                            <i class="fa-solid fa-check me-1"></i> Low Risk
+                                            <i class="fa-solid fa-check me-1"></i> Normal
                                         </span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     <a href="{% url 'explain' %}?row={{ r.row_index }}" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.8rem;">
                                         Explain
                                     </a>
@@ -76,22 +68,52 @@
             </div>
         </div>
 
-        {% if records_count > 500 %}
-            <div class="text-center text-muted small">
-                Showing first 500 records. Use the Download button above for the complete CSV dataset.
-            </div>
+        <!-- Practical Pagination Controls -->
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Results pagination" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="small text-muted">
+                    Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_records }} records
+                </div>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1" aria-label="First">&laquo; First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">Last &raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% endif %}
 
     {% else %}
-        <!-- No Results Empty State -->
+        <!-- Empty State -->
         <div class="text-center py-5">
             <div class="mb-3 text-muted">
                 <i class="fa-solid fa-folder-open fa-3x"></i>
             </div>
             <h5 class="fw-bold text-dark">No Prediction Results Available</h5>
-            <p class="text-secondary small mb-3">Upload a patient dataset on the Predict page to see model predictions here.</p>
+            <p class="text-secondary small mb-3">Upload a patient dataset on the Upload & Predict page to see model predictions here.</p>
             <a href="{% url 'upload' %}" class="btn btn-teal">
-                Go to Predict
+                Upload & Predict
             </a>
         </div>
     {% endif %}

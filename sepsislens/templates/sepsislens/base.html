@@ -15,13 +15,12 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Compact Navbar: Only Dashboard, Predict, Results, About -->
+    <!-- Compact Navbar: Dashboard, Upload & Predict, Results, About -->
     <nav class="navbar navbar-expand-lg navbar-custom">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <i class="fa-solid fa-heart-pulse text-danger"></i>
                 <span>SepsisLens</span>
-                <span class="brand-badge">MCA Project</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
                 <span class="navbar-toggler-icon"></span>
@@ -35,7 +34,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}" href="{% url 'upload' %}">
-                            Predict
+                            Upload & Predict
                         </a>
                     </li>
                     <li class="nav-item">
@@ -52,17 +51,6 @@
             </div>
         </div>
     </nav>
-
-    <!-- Small Research Disclaimer Strip -->
-    <div class="disclaimer-strip">
-        <div class="container d-flex justify-content-between align-items-center">
-            <span>
-                <i class="fa-solid fa-info-circle text-secondary me-1"></i>
-                <strong>Academic Research Prototype:</strong> Predictions are exploratory machine learning outputs, not clinical diagnoses.
-            </span>
-            <span class="d-none d-md-inline text-muted">PhysioNet Challenge 2019</span>
-        </div>
-    </div>
 
     <!-- Django Messages -->
     <div class="container mt-3">
@@ -81,11 +69,12 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Consistent Simple Footer -->
+    <!-- Exactly One Footer with Required Exact Disclaimer -->
     <footer>
         <div class="container text-center">
-            <div class="mb-1 text-dark fw-semibold">SepsisLens — Sepsis Risk Prediction System</div>
-            <div class="small">MCA Academic Project • Developed with Python, Django & Random Forest</div>
+            <div class="small text-muted">
+                Research Prototype: SepsisLens is an academic machine-learning project. Predictions are experimental and are not intended for clinical diagnosis or treatment decisions.
+            </div>
         </div>
     </footer>
 

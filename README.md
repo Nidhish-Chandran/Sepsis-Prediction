@@ -81,8 +81,8 @@ The system is designed as an **early-warning screening monitor**, not a diagnost
 
 ## 4. Key Features
 
-- **Minimal 3-Step Workflow:** Clean, beginner-friendly user journey suitable for academic viva and college project demonstration (**Dashboard → Predict → Results**).
-- **Compact Navigation:** Streamlined top navigation bar with only essential sections (Dashboard, Predict, Results, About).
+- **Minimal Workflow:** Clean, beginner-friendly user journey suitable for academic viva and college project demonstration (**Dashboard → Upload & Predict → Results → Explanation**).
+- **Compact Navigation:** Streamlined top navigation bar with only 4 essential items: Dashboard, Upload & Predict, Results, About.
 - **Robust CSV / PSV Parser & Validator:** Ingests ICU hourly data, enforces schema checks, detects missing columns, and rejects non-clinical inputs with explanatory messages.
 - **164-Feature Temporal Transformation Engine:** Reconstructs the exact feature generation logic from the research notebook (demographics, missingness indicators, cumulative counts, forward fills, 6h rolling statistics, 1h differentials, and baseline drifts).
 - **Random Forest Inference Engine:** Computes ensemble probabilities using 300 decision trees trained with `class_weight="balanced_subsample"`.

@@ -31,7 +31,7 @@ class ViewAndExportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "About SepsisLens")
         self.assertContains(response, "PhysioNet / Computing in Cardiology Challenge 2019")
-        self.assertContains(response, "Academic Prototype")
+        self.assertContains(response, "Research Prototype")
 
     def test_results_view_without_session_shows_empty_state(self):
         """Verify results page without active prediction displays empty state."""
