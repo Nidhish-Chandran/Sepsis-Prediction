@@ -60,3 +60,47 @@ class ExplainabilityTests(TestCase):
         self.assertEqual(api_data["row_index"], 0)
         self.assertIn("risk_score", api_data)
 
+    def test_explain_views_with_patient_id_and_hour_columns(self):
+        """Verify patient matching works correctly when using Patient_ID and Hour columns."""
+        from django.test import Client
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.urls import reverse
+
+        client = Client()
+        csv_content = (
+            b"Patient_ID,Hour,HR,O2Sat,Temp,SBP,MAP,Resp,WBC,Lactate\n"
+            b"PID_99,0,80,98,37.0,120,80,16,8.5,1.2\n"
+            b"PID_99,1,85,97,37.2,118,78,18,9.0,1.4\n"
+        )
+        uploaded = SimpleUploadedFile("pid_hour.csv", csv_content, content_type="text/csv")
+
+        up_resp = client.post(reverse('upload'), {'csv_file': uploaded}, follow=True)
+        self.assertEqual(up_resp.status_code, 200)
+
+        # Test explain view for hour 2 (row 1)
+        exp_resp = client.get(f"{reverse('explain')}?row=1")
+        self.assertEqual(exp_resp.status_code, 200)
+        self.assertContains(exp_resp, "PID_99")
+        self.assertContains(exp_resp, "Prediction Explanation")
+
+    def test_explain_views_out_of_range_row_handled_gracefully(self):
+        """Verify out-of-range row requests do not raise 500 exceptions."""
+        from django.test import Client
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.urls import reverse
+
+        client = Client()
+        csv_content = b"HR,O2Sat,Temp,SBP,MAP,Resp,WBC,Lactate\n85,98,37.0,120,80,16,8.5,1.2\n"
+        uploaded = SimpleUploadedFile("single.csv", csv_content, content_type="text/csv")
+        client.post(reverse('upload'), {'csv_file': uploaded}, follow=True)
+
+        # Web view with invalid/out-of-bounds row index should render gracefully without 500
+        exp_resp = client.get(f"{reverse('explain')}?row=999")
+        self.assertEqual(exp_resp.status_code, 200)
+
+        # API endpoint should return clean 400 Bad Request JSON
+        api_resp = client.get(f"{reverse('api_explain_row')}?row=999")
+        self.assertEqual(api_resp.status_code, 400)
+        self.assertIn("error", api_resp.json())
+
+
