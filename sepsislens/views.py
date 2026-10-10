@@ -252,17 +252,34 @@ def explain_view(request):
 
             # Check which raw clinical variables were missing for this patient hour
             if raw_df is not None:
-                pat_matches = raw_df[(raw_df.get('patient') == patient_id) | (raw_df.get('Patient_ID') == patient_id)]
-                if not pat_matches.empty:
-                    # Row matching hour
-                    h_matches = pat_matches[pat_matches.get('ICULOS') == hour]
-                    if not h_matches.empty:
-                        target_raw = h_matches.iloc[0]
-                    else:
-                        target_raw = pat_matches.iloc[-1]
-                    
-                    missing_signals = [col for col in VITALS + LABS if col in target_raw.index and pd.isna(target_raw[col])]
-                    missing_warnings = missing_signals
+                try:
+                    target_raw = None
+                    if 'patient' in raw_df.columns:
+                        p_matches = raw_df[raw_df['patient'].astype(str) == str(patient_id)]
+                        if not p_matches.empty:
+                            if 'ICULOS' in p_matches.columns:
+                                h_matches = p_matches[p_matches['ICULOS'] == hour]
+                                target_raw = h_matches.iloc[0] if not h_matches.empty else p_matches.iloc[0]
+                            else:
+                                target_raw = p_matches.iloc[0]
+                    elif 'Patient_ID' in raw_df.columns:
+                        p_matches = raw_df[raw_df['Patient_ID'].astype(str) == str(patient_id)]
+                        if not p_matches.empty:
+                            if 'ICULOS' in p_matches.columns:
+                                h_matches = p_matches[p_matches['ICULOS'] == hour]
+                                target_raw = h_matches.iloc[0] if not h_matches.empty else p_matches.iloc[0]
+                            else:
+                                target_raw = p_matches.iloc[0]
+
+                    # Safe fallback to row index if neither column is in raw_df
+                    if target_raw is None and 0 <= target_row_idx < len(raw_df):
+                        target_raw = raw_df.iloc[target_row_idx]
+
+                    if target_raw is not None:
+                        missing_signals = [col for col in VITALS + LABS if col in target_raw.index and pd.isna(target_raw[col])]
+                        missing_warnings = missing_signals
+                except Exception:
+                    missing_warnings = []
 
     context = {
         'global_importance': global_importance,
