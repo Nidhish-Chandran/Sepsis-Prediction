@@ -1,0 +1,149 @@
+{% extends "sepsislens/base.html" %}
+
+{% block title %}SepsisLens — About & Clinical Ethics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 1040px;">
+    <!-- Title -->
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">
+            <i class="fa-solid fa-notes-medical text-teal me-2" style="color: #0d9488;"></i>
+            About SepsisLens: Methodology, Architecture & Clinical Scope
+        </h2>
+        <p class="text-secondary">
+            Full documentation on the clinical objective, machine learning methodology, and ethical safeguards.
+        </p>
+    </div>
+
+    <!-- 1. Clinical Context -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4 p-md-5">
+            <h4 class="fw-bold text-dark mb-3">1. The Clinical Problem: Early Sepsis Detection</h4>
+            <p class="text-secondary">
+                Sepsis is defined by the international Sepsis-3 consensus as <em>life-threatening organ dysfunction caused by a dysregulated host response to infection</em>. In intensive care units worldwide, sepsis remains a primary driver of morbidity, prolonged hospitalization, and mortality.
+            </p>
+            <p class="text-secondary">
+                Clinical studies indicate that each hour of delayed administration of effective antimicrobial therapy during septic shock is associated with an approximate <strong>7.6% increase in mortality</strong>. However, early signs of sepsis (subtle tachycardia, respiratory rate fluctuations, lab shifts) mimic general post-operative recovery or other inflammatory conditions, making early detection exceedingly difficult.
+            </p>
+            <div class="p-3 bg-light rounded-3 border">
+                <div class="fw-bold small text-dark mb-1">The PhysioNet 2019 Sepsis Challenge Definition</div>
+                <div class="small text-secondary">
+                    The task formulated by the PhysioNet / Computing in Cardiology Challenge 2019 is to predict sepsis onset <strong>6 hours before clinical criteria are met</strong> (defined by clinical suspicion of infection combined with a ≥2 point increase in SOFA score). This 6-hour forward-shifted window provides clinicians a crucial intervention window.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Machine Learning Architecture -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4 p-md-5">
+            <h4 class="fw-bold text-dark mb-3">2. System Architecture & 164-Feature Engineering</h4>
+            <p class="text-secondary">
+                Raw ICU records contain 40 raw clinical variables across vitals, labs, and demographics. Due to high sparsity (>90% missingness across key labs like Lactate or Bilirubin), SepsisLens expands the feature representation to 164 dimensions:
+            </p>
+            <div class="table-responsive">
+                <table class="table table-bordered small mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Feature Category</th>
+                            <th>Count</th>
+                            <th>Description & Clinical Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">Static & Demographics</td>
+                            <td>6</td>
+                            <td>Age, Gender, ICU unit type (Unit1/Unit2), Hospital Admission Time, and Length of Stay (ICULOS).</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Missingness Indicators (<code>_msg</code>)</td>
+                            <td>26</td>
+                            <td>Binary flags recording whether each lab test was absent at that hour, capturing clinician diagnostic intent.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Cumulative Observation Counts (<code>_cnt</code>)</td>
+                            <td>14</td>
+                            <td>Running frequency of tests ordered so far, reflecting patient illness severity.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Forward-Filled Signals</td>
+                            <td>34</td>
+                            <td>Carrying last observed vital sign and lab value forward within each patient's timeline.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">6-Hour Rolling Statistics</td>
+                            <td>56</td>
+                            <td>Rolling mean, min, max, and standard deviation over a 6-hour window capturing physiological instability.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Hour-to-Hour Differentials (<code>_d1</code>)</td>
+                            <td>14</td>
+                            <td>First-order discrete derivative reflecting instantaneous physiological velocity.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Baseline Drift (<code>_dbase</code>)</td>
+                            <td>14</td>
+                            <td>Cumulative physiological deviation from the patient's admission baseline state.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-secondary small mb-0">
+                <strong>Total Engineered Dimensions:</strong> 6 + 26 + 14 + 34 + 56 + 14 + 14 = <strong>164 Features</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- 3. Preprocessing & Leakage Integrity -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4 p-md-5">
+            <h4 class="fw-bold text-dark mb-3">3. Preprocessing Integrity & Data Leakage Prevention</h4>
+            <p class="text-secondary">
+                To guarantee valid generalization, the application enforces the following safeguards:
+            </p>
+            <ul class="text-secondary small ps-3 mb-0">
+                <li class="mb-2">
+                    <strong>Patient-Level Stratified Splitting:</strong> The 5,000-patient cohort was partitioned by patient ID into 70% train (3,500 patients), 15% validation (750 patients), and 15% test (750 patients). No patient's records ever straddle two sets.
+                </li>
+                <li class="mb-2">
+                    <strong>Strict Training Imputation:</strong> The median imputer is fitted strictly on the 133,397 training rows. Validation and test sets are transformed using training medians only.
+                </li>
+                <li class="mb-2">
+                    <strong>Chronological Forward-Fill:</strong> Forward-fills and rolling windows operate strictly forward in time within each patient, preventing temporal leakage.
+                </li>
+                <li>
+                    <strong>Post-Split Resampling (SMOTE):</strong> SMOTE was evaluated strictly after patient splitting on training rows only, exposing the true generalization performance.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 4. Limitations & Ethical Considerations -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4 p-md-5">
+            <h4 class="fw-bold text-danger mb-3">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                4. Clinical Limitations & Ethical Considerations
+            </h4>
+            <div class="alert alert-danger border-0 rounded-3 small mb-3">
+                <strong>IMPORTANT REGULATORY NOTICE:</strong> SepsisLens is an exploratory academic research software prototype. It has not received FDA clearance, CE mark certification, or prospective clinical trial validation as Software as a Medical Device (SaMD). It must never be used to initiate, alter, or withhold patient treatments.
+            </div>
+            <ul class="text-secondary small ps-3 mb-0">
+                <li class="mb-2">
+                    <strong>Cross-Hospital Domain Shift:</strong> In Cell 33 of the notebook, training on Hospital A and evaluating on unseen Hospital B resulted in a drop in ROC-AUC from 0.8224 to 0.7509, and PR-AUC from 0.1259 to 0.0484. Hospital-specific lab test patterns cause significant domain shift.
+                </li>
+                <li class="mb-2">
+                    <strong>Alert Fatigue Risk:</strong> A single-hour trigger policy produces a 21.5% false alarm rate among non-septic patients. Clinicians should employ a multi-hour confirmation policy (e.g. 2 or 3 consecutive hours) to suppress false positives.
+                </li>
+                <li class="mb-2">
+                    <strong>Missing Data Sensitivity:</strong> When an ICU patient has very few lab tests recorded, the model relies on demographic averages and population medians. Clinicians must inspect the Missing Signal Audit.
+                </li>
+                <li>
+                    <strong>Uncalibrated Score Representation:</strong> The Random Forest output score represents the ensemble vote fraction (the proportion of decision trees voting positive), which is an uncalibrated probability score.
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

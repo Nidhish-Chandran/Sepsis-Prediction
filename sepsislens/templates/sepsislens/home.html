@@ -1,0 +1,175 @@
+{% extends "sepsislens/base.html" %}
+
+{% block title %}SepsisLens — Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Hero Banner -->
+    <div class="hero-card mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-teal mb-2" style="background-color: #0d9488;">PhysioNet / CinC Challenge 2019</span>
+                <h1 class="display-5 fw-bold mb-3 text-white">SepsisLens: Machine Learning for Early Sepsis Detection</h1>
+                <p class="lead text-light opacity-90 mb-4" style="max-width: 720px;">
+                    An interpretable clinical decision-support pipeline trained to detect sepsis up to 6 hours before clinical onset in ICU patients. Powered by a 164-feature temporal engineering pipeline and a calibrated Random Forest ensemble.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{% url 'upload' %}" class="btn btn-primary btn-lg px-4" style="background-color: #0d9488; border-color: #0d9488;">
+                        <i class="fa-solid fa-file-arrow-up me-2"></i> Upload ICU Records & Predict
+                    </a>
+                    <a href="{% url 'model_comparison' %}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="fa-solid fa-scale-balanced me-2"></i> Model Selection Evidence
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 d-none d-lg-block text-end">
+                <div class="p-3 rounded-4 bg-white bg-opacity-10 backdrop-blur border border-white border-opacity-20 text-start">
+                    <div class="text-warning small text-uppercase fw-bold mb-2">
+                        <i class="fa-solid fa-shield-halved me-1"></i> Patient-Level Split Rigor
+                    </div>
+                    <div class="small text-light mb-1"><strong>Prevalence:</strong> 1.5% - 1.6% (Extreme Imbalance)</div>
+                    <div class="small text-light mb-1"><strong>Primary Metric:</strong> ROC-AUC (0.7834)</div>
+                    <div class="small text-light mb-1"><strong>Selected Model:</strong> Random Forest (300 Trees)</div>
+                    <div class="small text-light"><strong>Early Warning Lead:</strong> 27.5h Median Warning</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-teal mb-0">
+                    <i class="fa-solid fa-tree"></i>
+                </div>
+                <div>
+                    <div class="stat-value text-teal" style="color: #0d9488;">300 Trees</div>
+                    <div class="stat-label">Random Forest Ensemble</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-blue mb-0">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <div>
+                    <div class="stat-value text-primary">164 Features</div>
+                    <div class="stat-label">Temporal Feature Space</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-purple mb-0">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="stat-value" style="color: #7e22ce;">{{ total_patients|default:"5,000" }}</div>
+                    <div class="stat-label">ICU Patient Cohort</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-rose mb-0">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <div>
+                    <div class="stat-value text-danger">{{ decision_threshold|floatformat:4 }}</div>
+                    <div class="stat-label">Operating Decision Cutoff</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Architecture -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">
+                    <i class="fa-solid fa-diagram-project text-primary me-2"></i>
+                    164-Feature Engineering Architecture
+                </h5>
+                <span class="badge bg-light text-secondary border">Exact Reproduction from Notebook</span>
+            </div>
+            <p class="text-secondary small mb-4">
+                Raw ICU observations suffer from extreme sparsity (>90% missingness across key labs). Rather than discarding sparse tests or leaking future information, SepsisLens reproduces the notebook's exact multi-channel feature expansion:
+            </p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <div class="fw-bold text-dark mb-1">1. Static & Missingness (32)</div>
+                        <div class="small text-secondary">
+                            6 static demographic features (Age, Gender, Unit, HospAdmTime, ICULOS) + 26 missingness indicator flags (<code>_msg</code>) recording clinical ordering patterns.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <div class="fw-bold text-dark mb-1">2. Forward-Fill & Sampling (48)</div>
+                        <div class="small text-secondary">
+                            34 vital and lab signals forward-filled within patient stays + 14 cumulative count features (<code>_cnt</code>) measuring observation frequency.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <div class="fw-bold text-dark mb-1">3. Trends & Dynamics (84)</div>
+                        <div class="small text-secondary">
+                            56 rolling statistics (mean, min, max, std over 6h) + 14 hour-to-hour differentials (<code>_d1</code>) + 14 baseline drift vectors (<code>_dbase</code>).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Action Cards -->
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="feature-card">
+                <div class="card-icon icon-teal">
+                    <i class="fa-solid fa-file-csv"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Upload ICU Data</h5>
+                <p class="text-secondary small mb-4">
+                    Upload an hourly patient CSV or select pre-loaded test cases (septic vs stable) to execute inference with validation and schema checking.
+                </p>
+                <a href="{% url 'upload' %}" class="btn btn-outline-dark w-100">
+                    Go to Prediction Upload <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="feature-card">
+                <div class="card-icon icon-purple">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Explainable AI (SHAP)</h5>
+                <p class="text-secondary small mb-4">
+                    Inspect global tree feature importance and patient-level TreeSHAP contributions to understand why specific vitals or trends raised an alarm.
+                </p>
+                <a href="{% url 'explain' %}" class="btn btn-outline-dark w-100">
+                    Explore Explanations <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="feature-card">
+                <div class="card-icon icon-blue">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Model Comparison Rationale</h5>
+                <p class="text-secondary small mb-4">
+                    Review documented notebook metrics comparing Random Forest, Logistic Regression, Linear SVM, Decision Tree, and RBF SVM under honest evaluation.
+                </p>
+                <a href="{% url 'model_comparison' %}" class="btn btn-outline-dark w-100">
+                    View Benchmark Data <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

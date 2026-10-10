@@ -1,0 +1,326 @@
+{% extends "sepsislens/base.html" %}
+
+{% block title %}SepsisLens — Prediction Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Top Bar with Stats and Export -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold mb-1">
+                <i class="fa-solid fa-chart-line text-teal me-2" style="color: #0d9488;"></i>
+                Inference Results & Risk Trajectory
+            </h3>
+            <p class="text-secondary small mb-0">
+                Source File: <span class="badge bg-light text-dark border">{{ filename }}</span> |
+                Decision Threshold: <span class="badge bg-dark">{{ threshold_used|floatformat:4 }} ({{ threshold_percent }}%)</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'export_csv' %}" class="btn btn-outline-success">
+                <i class="fa-solid fa-file-export me-1"></i> Export Results (CSV)
+            </a>
+            <a href="{% url 'upload' %}" class="btn btn-primary" style="background-color: #0d9488; border-color: #0d9488;">
+                <i class="fa-solid fa-rotate-left me-1"></i> New Prediction
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-blue mb-0">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ total_records }}</div>
+                    <div class="stat-label">Total ICU Hours Evaluated</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-purple mb-0">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ patient_count }}</div>
+                    <div class="stat-label">Unique Patients</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-rose mb-0">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <div>
+                    <div class="stat-value text-danger">{{ positive_alarms }}</div>
+                    <div class="stat-label">Triggered Sepsis Alerts</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-widget">
+                <div class="card-icon icon-teal mb-0">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+                <div>
+                    <div class="stat-value" style="color: #0d9488;">{{ alarm_rate }}%</div>
+                    <div class="stat-label">Hourly Alarm Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Chart for Selected Patient -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div>
+                    <h5 class="fw-bold mb-0">
+                        <i class="fa-solid fa-wave-square text-teal me-2" style="color: #0d9488;"></i>
+                        Hourly Sepsis Risk Progression: Patient <span class="badge bg-primary">{{ selected_patient }}</span>
+                    </h5>
+                    <div class="small text-secondary">Timeline of predicted ensemble score relative to tuned decision threshold ({{ threshold_percent }}%)</div>
+                </div>
+                <!-- Patient Selector Dropdown if multi-patient -->
+                {% if patient_summaries|length > 1 %}
+                    <form method="GET" class="d-flex gap-2 align-items-center">
+                        <label class="small text-secondary fw-bold mb-0">Select Patient:</label>
+                        <select name="patient" class="form-select form-select-sm" onchange="this.form.submit()">
+                            {% for p in patient_summaries %}
+                                <option value="{{ p.patient }}" {% if p.patient == selected_patient %}selected{% endif %}>
+                                    {{ p.patient }} ({{ p.total_hours }}h, Max: {{ p.max_risk_percent }}%)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                {% endif %}
+            </div>
+
+            <div style="height: 320px;">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient-Level Summaries -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold mb-0">
+                <i class="fa-solid fa-users text-primary me-2"></i>
+                Patient-Level Summary
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Stay Length</th>
+                        <th>Max Risk Score</th>
+                        <th>Latest Hour Status</th>
+                        <th>Ever Sepsis Alert?</th>
+                        <th>First Alarm Hour</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in patient_summaries %}
+                        <tr>
+                            <td class="fw-bold">{{ p.patient }}</td>
+                            <td>{{ p.total_hours }} hours</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 8px; width: 80px;">
+                                        <div class="progress-bar {% if p.ever_sepsis_alarm %}bg-danger{% else %}bg-success{% endif %}"
+                                             style="width: {{ p.max_risk_percent }}%;"></div>
+                                    </div>
+                                    <span class="small fw-bold">{{ p.max_risk_percent }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if p.latest_verdict == 'SEPSIS ALERT' %}badge-sepsis-alert{% else %}badge-low-risk{% endif %}">
+                                    {{ p.latest_verdict }} ({{ p.latest_risk_percent }}%)
+                                </span>
+                            </td>
+                            <td>
+                                {% if p.ever_sepsis_alarm %}
+                                    <span class="badge badge-sepsis-alert"><i class="fa-solid fa-triangle-exclamation"></i> YES ({{ p.total_alarm_hours }}h)</span>
+                                {% else %}
+                                    <span class="badge badge-low-risk"><i class="fa-solid fa-check"></i> NO</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.first_alarm_hour %}
+                                    <span class="badge bg-warning text-dark">Hour {{ p.first_alarm_hour }}</span>
+                                {% else %}
+                                    <span class="text-secondary small">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'explain' %}?patient={{ p.patient }}" class="btn btn-sm btn-outline-dark">
+                                    <i class="fa-solid fa-brain me-1"></i> Explain Patient
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detailed Hourly Timeline Table -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <h5 class="fw-bold mb-0">
+                    <i class="fa-solid fa-table-list text-teal me-2" style="color: #0d9488;"></i>
+                    Detailed Hourly Predictions
+                </h5>
+                <div style="width: 280px;">
+                    <input type="text" id="table_search_input" class="form-control form-control-sm" placeholder="Filter records by patient, verdict...">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="results_table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Patient ID</th>
+                            <th>ICULOS (Hour)</th>
+                            <th>Model Score</th>
+                            <th>Sepsis Risk (%)</th>
+                            <th>Classification</th>
+                            <th>Clinical Verdict</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in records %}
+                            <tr>
+                                <td class="text-secondary small">{{ r.row_index }}</td>
+                                <td class="fw-semibold">{{ r.patient }}</td>
+                                <td>Hour {{ r.iculos }}</td>
+                                <td class="font-monospace small">{{ r.risk_score }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                            <div class="progress-bar {% if r.prediction == 1 %}bg-danger{% else %}bg-teal{% endif %}"
+                                                 style="width: {{ r.risk_percent }}%; background-color: {% if r.prediction == 1 %}#e11d48{% else %}#0d9488{% endif %};"></div>
+                                        </div>
+                                        <span class="small fw-bold">{{ r.risk_percent }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if r.prediction == 1 %}
+                                        <span class="badge bg-danger">Class 1</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Class 0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.prediction == 1 %}
+                                        <span class="badge badge-sepsis-alert">
+                                            <i class="fa-solid fa-circle-exclamation"></i> SEPSIS ALERT
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-low-risk">
+                                            <i class="fa-solid fa-check"></i> Low Risk
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'explain' %}?row={{ r.row_index }}" class="btn btn-sm btn-outline-primary" style="color: #0d9488; border-color: #0d9488;">
+                                        <i class="fa-solid fa-magnifying-glass-chart me-1"></i> Explain Hour
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if records_count > 500 %}
+                <div class="text-center text-secondary small mt-3">
+                    Showing first 500 records of {{ records_count }}. Download CSV for full dataset.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const timelineData = {{ chart_timeline_json|safe }};
+    const thresholdPct = {{ threshold_percent }};
+
+    if (timelineData && timelineData.length > 0) {
+        const labels = timelineData.map(d => 'Hour ' + d.iculos);
+        const risks = timelineData.map(d => d.risk_percent);
+        const thresholdLine = timelineData.map(() => thresholdPct);
+
+        const pointColors = timelineData.map(d => d.prediction === 1 ? '#e11d48' : '#0d9488');
+        const pointRadii = timelineData.map(d => d.prediction === 1 ? 6 : 3);
+
+        const ctx = document.getElementById('timelineChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Sepsis Risk Score (%)',
+                        data: risks,
+                        borderColor: '#0d9488',
+                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: pointRadii,
+                    },
+                    {
+                        label: 'Decision Threshold (' + thresholdPct + '%)',
+                        data: thresholdLine,
+                        borderColor: '#e11d48',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: 'Predicted Risk Score (%)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'ICU Stay Timeline (Hours)' }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

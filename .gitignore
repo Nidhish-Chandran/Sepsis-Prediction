@@ -1,0 +1,42 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+venv/
+env/
+.venv/
+ENV/
+
+# Django local database, staticfiles, media
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+*.log
+
+# Sensitive environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large raw clinical datasets and extraction caches (PhysioNet raw data > 150MB)
+Dataset.csv
+cache/
+training_setA/
+training_setB/
+*.parquet
+*.psv
+models.zip
+archive*.zip

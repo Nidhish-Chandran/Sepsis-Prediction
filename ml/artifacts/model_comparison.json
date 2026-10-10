@@ -1,0 +1,142 @@
+{
+  "Random Forest": {
+    "Accuracy": 0.9578,
+    "Precision": 0.0921,
+    "Recall": 0.2,
+    "F1": 0.1261,
+    "ROC_AUC": 0.7834,
+    "PR_AUC": 0.0601,
+    "Threshold": 0.338,
+    "Confusion_Matrix": [
+      [
+        28220,
+        887
+      ],
+      [
+        360,
+        90
+      ]
+    ],
+    "Description": "Selected primary model. Best ROC-AUC on patient-level test split."
+  },
+  "Random Forest + SMOTE": {
+    "Accuracy": 0.9557,
+    "Precision": 0.0996,
+    "Recall": 0.2378,
+    "F1": 0.1404,
+    "ROC_AUC": 0.7922,
+    "PR_AUC": 0.0758,
+    "Threshold": 0.2447,
+    "Confusion_Matrix": [
+      [
+        28140,
+        967
+      ],
+      [
+        343,
+        107
+      ]
+    ],
+    "Description": "Trained with SMOTE (sampling_strategy=0.3) strictly on training set."
+  },
+  "Logistic Regression": {
+    "Accuracy": 0.9663,
+    "Precision": 0.1221,
+    "Recall": 0.1956,
+    "F1": 0.1503,
+    "ROC_AUC": 0.7797,
+    "PR_AUC": 0.096,
+    "Threshold": 0.9156,
+    "Confusion_Matrix": [
+      [
+        28474,
+        633
+      ],
+      [
+        362,
+        88
+      ]
+    ],
+    "Description": "L2 regularization, balanced weights, scaled inputs."
+  },
+  "SVM (Linear)": {
+    "Accuracy": 0.9643,
+    "Precision": 0.1174,
+    "Recall": 0.2067,
+    "F1": 0.1498,
+    "ROC_AUC": 0.7768,
+    "PR_AUC": 0.0941,
+    "Threshold": 0.8686,
+    "Confusion_Matrix": [
+      [
+        28408,
+        699
+      ],
+      [
+        357,
+        93
+      ]
+    ],
+    "Description": "LinearSVC with balanced weights on scaled features."
+  },
+  "Random Forest (no ICULOS)": {
+    "Accuracy": 0.9435,
+    "Precision": 0.0793,
+    "Recall": 0.2556,
+    "F1": 0.121,
+    "ROC_AUC": 0.7791,
+    "PR_AUC": 0.0569,
+    "Threshold": 0.2663,
+    "Confusion_Matrix": [
+      [
+        27771,
+        1336
+      ],
+      [
+        335,
+        115
+      ]
+    ],
+    "Description": "Ablation study removing length of stay feature."
+  },
+  "Decision Tree": {
+    "Accuracy": 0.9317,
+    "Precision": 0.0899,
+    "Recall": 0.3822,
+    "F1": 0.1456,
+    "ROC_AUC": 0.6967,
+    "PR_AUC": 0.0605,
+    "Threshold": 0.8523,
+    "Confusion_Matrix": [
+      [
+        27366,
+        1741
+      ],
+      [
+        278,
+        172
+      ]
+    ],
+    "Description": "Single decision tree (depth=6, min_samples_leaf=20)."
+  },
+  "SVM (RBF, subsampled)": {
+    "Accuracy": 0.9175,
+    "Precision": 0.0498,
+    "Recall": 0.2444,
+    "F1": 0.0828,
+    "ROC_AUC": 0.6827,
+    "PR_AUC": 0.0339,
+    "Threshold": -0.4847,
+    "Confusion_Matrix": [
+      [
+        27010,
+        2097
+      ],
+      [
+        340,
+        110
+      ]
+    ],
+    "Description": "Non-linear kernel SVM on 120k subsampled rows."
+  }
+}

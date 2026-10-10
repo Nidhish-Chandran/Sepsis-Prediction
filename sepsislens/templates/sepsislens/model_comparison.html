@@ -1,0 +1,327 @@
+{% extends "sepsislens/base.html" %}
+
+{% block title %}SepsisLens — Model Selection Evidence{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">
+            <i class="fa-solid fa-scale-balanced text-teal me-2" style="color: #0d9488;"></i>
+            Model Selection Evidence & Clinical Trade-offs
+        </h3>
+        <p class="text-secondary small mb-0">
+            Recorded evaluation benchmarks and trade-off analysis from the original <code>ML_Project.ipynb</code> experimental pipeline.
+        </p>
+    </div>
+
+    <!-- Executive Selection Rationale -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge bg-teal me-2" style="background-color: #0d9488;">Primary Finding</span>
+                <h5 class="fw-bold mb-0">Why Random Forest Was Selected — And Its Clinical Trade-offs</h5>
+            </div>
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <p class="text-secondary small mb-3">
+                        In the notebook's honest patient-level split, <strong>Random Forest was selected primarily because it achieved the highest ROC-AUC (0.7834)</strong> among all models evaluated without SMOTE. However, its superiority across all clinical metrics is <strong>not established</strong>:
+                    </p>
+                    <ul class="text-secondary small ps-3 mb-0">
+                        <li class="mb-2">
+                            <strong>Precision & PR-AUC:</strong> <em>Logistic Regression</em> achieved higher Precision (<strong>0.1221</strong> vs 0.0921) and higher PR-AUC (<strong>0.0960</strong> vs 0.0601), generating fewer false alarms per true case.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Sensitivity / Recall:</strong> <em>Decision Tree</em> achieved much higher Recall (<strong>0.3822</strong> vs 0.2000), capturing almost double the proportion of sepsis cases at its tuned threshold, though with higher false positives.
+                        </li>
+                        <li class="mb-2">
+                            <strong>F1 Score:</strong> Logistic Regression (<strong>0.1503</strong>), Linear SVM (<strong>0.1498</strong>), and Decision Tree (<strong>0.1456</strong>) all achieved higher F1 scores than Random Forest (0.1261) at their respective validation-tuned thresholds.
+                        </li>
+                        <li>
+                            <strong>Conclusion:</strong> Model selection in clinical sepsis depends on the operational tolerance for alert fatigue. Random Forest was selected as the default deployment candidate for its superior threshold-independent discrimination (ROC-AUC), robust non-linear handling, and stability under missing data, but <strong>is not universally optimal for every clinical objective</strong>.
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                        <div class="fw-bold small text-dark mb-2">
+                            <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>
+                            Extreme Class Imbalance Context
+                        </div>
+                        <div class="small text-secondary mb-2">
+                            With only <strong>1.52% sepsis prevalence</strong> in the test cohort (1 septic hour for every 65 normal hours), raw accuracy (95.8%) is misleading.
+                        </div>
+                        <div class="small text-secondary">
+                            A naive model predicting "no sepsis" always achieves 98.5% accuracy while catching zero patients. Therefore, ROC-AUC and PR-AUC were the notebook's primary decision drivers.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Comparison Table -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold mb-0">
+                <i class="fa-solid fa-table text-primary me-2"></i>
+                Benchmark Results on Held-Out Test Set (Patient-Level Split)
+            </h5>
+            <div class="small text-secondary">Exact figures recorded in <code>ML_Project.ipynb</code> (Cell 24 & Summary Cell 34)</div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Model</th>
+                        <th>ROC-AUC</th>
+                        <th>PR-AUC</th>
+                        <th>F1 Score</th>
+                        <th>Recall</th>
+                        <th>Precision</th>
+                        <th>Accuracy</th>
+                        <th>Tuned Threshold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, m in models.items %}
+                        <tr {% if name == 'Random Forest' %}class="table-success table-opacity-10"{% endif %}>
+                            <td class="fw-bold">
+                                {{ name }}
+                                {% if name == 'Random Forest' %}
+                                    <span class="badge bg-teal ms-1" style="background-color: #0d9488;">Selected Primary</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold font-monospace text-primary">{{ m.ROC_AUC|floatformat:4 }}</td>
+                            <td class="font-monospace">{{ m.PR_AUC|floatformat:4 }}</td>
+                            <td class="font-monospace">{{ m.F1|floatformat:4 }}</td>
+                            <td class="font-monospace">{{ m.Recall|floatformat:4 }}</td>
+                            <td class="font-monospace">{{ m.Precision|floatformat:4 }}</td>
+                            <td class="font-monospace">{{ m.Accuracy|floatformat:4 }}</td>
+                            <td class="font-monospace small text-secondary">{{ m.Threshold|floatformat:4 }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Comparative Visual Charts -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-1">ROC-AUC Comparison (Discrimination Quality)</h5>
+                    <p class="text-secondary small mb-3">Ranking quality across all score thresholds</p>
+                    <div style="height: 280px;">
+                        <canvas id="rocAucChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-1">Precision vs. Recall Trade-Off</h5>
+                    <p class="text-secondary small mb-3">Operating trade-off at validation-tuned thresholds</p>
+                    <div style="height: 280px;">
+                        <canvas id="prTradeoffChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Early Warning Lead Time Analysis -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-2">
+                <i class="fa-solid fa-clock text-warning me-2"></i>
+                Early Warning Lead-Time & Alert Fatigue Analysis
+            </h5>
+            <p class="text-secondary small mb-3">
+                In sepsis intervention, warning hours before clinical onset save lives, but excessive false alarms cause alert fatigue. Notebook analysis revealed:
+            </p>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <div class="fs-4 fw-bold text-teal" style="color: #0d9488;">27.5 Hours</div>
+                        <div class="small text-secondary">Median Lead Warning Time</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <div class="fs-4 fw-bold text-primary">50.0%</div>
+                        <div class="small text-secondary">Septic Patients Caught Early (24/48)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <div class="fs-4 fw-bold text-danger">21.5%</div>
+                        <div class="small text-secondary">Single-Alarm False Alert Rate</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <div class="fs-4 fw-bold text-success">0.9%</div>
+                        <div class="small text-secondary">False Rate at 3 Consecutive Hours</div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold text-dark mb-2">Consecutive Alarm Hour Policy (False Alarm Suppression)</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle text-center small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Consecutive Alarm Hours Required</th>
+                            <th>Detection Rate (%)</th>
+                            <th>Median Lead Time</th>
+                            <th>False Alarm Rate (%)</th>
+                            <th>Clinical Utility Interpretation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">1 Hour (Single Trigger)</td>
+                            <td>50.0%</td>
+                            <td>27.5 h</td>
+                            <td class="text-danger fw-bold">21.5%</td>
+                            <td class="text-start">Catches 1 in 2 septic patients; high false-alarm noise.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">2 Hours</td>
+                            <td>27.1%</td>
+                            <td>38.0 h</td>
+                            <td class="text-success fw-bold">1.9%</td>
+                            <td class="text-start">False alarms drop tenfold (from 21.5% to 1.9%).</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">3 Hours</td>
+                            <td>27.1%</td>
+                            <td>34.0 h</td>
+                            <td class="text-success fw-bold">0.9%</td>
+                            <td class="text-start">Maintains 27% detection with <1% false alarm rate.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">4 Hours</td>
+                            <td>25.0%</td>
+                            <td>34.5 h</td>
+                            <td class="text-success fw-bold">0.7%</td>
+                            <td class="text-start">Very high specificity; 34.5h median advance warning.</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">6 Hours</td>
+                            <td>20.8%</td>
+                            <td>32.5 h</td>
+                            <td class="text-success fw-bold">0.3%</td>
+                            <td class="text-start">Near-zero false alarms; retains 32.5h lead warning.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Leakage Demonstration -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-2">
+                <i class="fa-solid fa-shield-virus text-danger me-2"></i>
+                Methodological Integrity: Preventing The "Paper-Style" Leakage Fallacy
+            </h5>
+            <p class="text-secondary small mb-3">
+                Cell 31 of <code>ML_Project.ipynb</code> demonstrates a common flaw in published ML literature: randomly shuffling rows across all patients and applying SMOTE <em>before</em> splitting:
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-danger bg-opacity-10 border border-danger">
+                        <div class="fw-bold text-danger mb-1">Flawed Protocol (Row Shuffle + Pre-Split SMOTE)</div>
+                        <div class="small mb-1"><strong>Accuracy:</strong> 0.9987 | <strong>F1:</strong> 0.9987 | <strong>ROC-AUC:</strong> 0.9999</div>
+                        <div class="small text-secondary">
+                            Artificially inflated metrics caused by rows from the same patient appearing in both train and test splits, leaking synthetic patient data.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-success bg-opacity-10 border border-success">
+                        <div class="fw-bold text-success mb-1">Honest Protocol (Patient-Level Stratified Split)</div>
+                        <div class="small mb-1"><strong>Accuracy:</strong> 0.9578 | <strong>F1:</strong> 0.1261 | <strong>ROC-AUC:</strong> 0.7834</div>
+                        <div class="small text-secondary">
+                            Strict patient grouping ensures zero patient overlap between train, validation, and test cohorts. SepsisLens strictly preserves this honest protocol.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rawData = {{ comparison_chart_json|safe }};
+    const modelNames = Object.keys(rawData);
+    const rocAucs = modelNames.map(k => rawData[k].roc_auc);
+    const prAucs = modelNames.map(k => rawData[k].pr_auc);
+    const recalls = modelNames.map(k => rawData[k].recall);
+    const precisions = modelNames.map(k => rawData[k].precision);
+
+    // 1. ROC-AUC Chart
+    const ctxRoc = document.getElementById('rocAucChart').getContext('2d');
+    new Chart(ctxRoc, {
+        type: 'bar',
+        data: {
+            labels: modelNames,
+            datasets: [{
+                label: 'ROC-AUC',
+                data: rocAucs,
+                backgroundColor: modelNames.map(n => n === 'Random Forest' ? '#0d9488' : '#94a3b8'),
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { min: 0.6, max: 0.85, title: { display: true, text: 'ROC-AUC' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 2. PR Trade-off Chart
+    const ctxPr = document.getElementById('prTradeoffChart').getContext('2d');
+    new Chart(ctxPr, {
+        type: 'bar',
+        data: {
+            labels: modelNames,
+            datasets: [
+                {
+                    label: 'Precision',
+                    data: precisions,
+                    backgroundColor: '#0284c7',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Recall',
+                    data: recalls,
+                    backgroundColor: '#e11d48',
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 0.45, title: { display: true, text: 'Score' } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
